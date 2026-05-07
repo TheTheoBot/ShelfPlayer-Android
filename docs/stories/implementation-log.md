@@ -189,7 +189,7 @@
    189|  - Push to GitHub, monitor the GitHub Actions run, and update Issue #3 with the commit hash and CI link.
    190|
 ## 2026-05-07T18:47:12Z
-- Story/Issue: pending — Story: Player progress sync and resume
+- Story/Issue: #4 — Story: Player progress sync and resume
 - Implemented:
   - Added a playback progress repository with local snapshot persistence and Audiobookshelf sync fallback (POST → PUT) for the MVP player slice.
   - Wired the player to resume from the most recent saved progress when no chapter-specific start position is selected, while still honoring explicit chapter starts.
