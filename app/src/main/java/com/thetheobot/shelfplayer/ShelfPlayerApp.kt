@@ -202,7 +202,7 @@ fun ShelfPlayerApp() {
         }
     }
 
-    private fun clearPlaybackStateWithoutSync() {
+    fun clearPlaybackStateWithoutSync() {
         mediaPlayer?.release()
         mediaPlayer = null
         playbackActiveItemId = null

@@ -204,20 +204,14 @@
 - Next step:
 - Commit and push this player/progress slice, then update the GitHub story issue with the commit hash and CI run link.
 
-## 2026-05-07T19:50:14Z
+## 2026-05-07T19:58:49Z
 - Story/Issue: #4 — Story: Player progress sync and resume
 - Implemented:
-  - Added namespaced playback-progress persistence so resume data stays isolated per Audiobookshelf server.
-  - Hardened resume selection to prefer saved progress only when appropriate, clamp negative offsets to 0, and avoid resuming items already at EOF.
-  - Kept playback rate handling centralized and fixed seek safety for zero-duration / negative-position cases.
-  - Wrapped MediaPlayer startup in a recoverable failure path so setup exceptions surface as a user-facing error instead of leaving the UI inconsistent.
-  - Added regression coverage for persistence, namespace isolation, resume clamping, EOF suppression, remote sync fallback, path encoding, and negative seek behavior.
+  - Fixed the local playback startup failure path by removing the illegal private modifier from the local cleanup helper so the Android build compiles again.
 - Verification:
   - `git diff --check` ✅
-  - Independent spec review: PASS
-  - Independent code quality review: PASS
-  - Local Android Gradle execution is still blocked here because `java` is not installed.
+  - Android CI rerun pending after the fix commit.
 - Commit(s):
   - pending
 - Next step:
-  - Commit, push, and update Issue #4 with the commit hash plus the GitHub Actions verification link.
+  - Commit the startup compile fix, push it, and re-run GitHub Actions to confirm the build is green.
