@@ -220,3 +220,18 @@
 - `6ecc367` — feat: add persisted settings screen
 - Next step:
 - Push to GitHub, create/update the Story #5 issue with the commit hash and CI run link, and let GitHub Actions validate the Android build/tests.
+
+## 2026-05-07T21:55:34Z
+- Story/Issue: #6 — Story: Search within active library and navigate to detail
+- Implemented:
+- Created Story #6 in GitHub and aligned the repo story log with the search slice now present in the app shell.
+- Verified the search slice covers local filtering by title, author, and ID, explicit submit-based execution, and result navigation back into item detail.
+- Kept the run documentation-only because the search code is already present in the current HEAD.
+- Verification:
+- `git diff --check` ✅
+- `java -version` → `command not found`
+- `./gradlew testDebugUnitTest` could not run locally because Java is not installed in this environment.
+- Commit(s):
+- pending
+- Next step:
+- Commit and push the documentation update, then post the commit hash and GitHub Actions run link back onto Story #6 once CI finishes.
