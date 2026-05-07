@@ -73,6 +73,7 @@
   - Local Gradle build/test unavailable because `java` is not installed in this environment.
   - Independent spec review: PASS
   - Independent code quality review: APPROVED
-- Commit(s): pending
+- Commit(s):
+  - `a626946` — feat: harden connection onboarding and verification
 - Next step:
   - Commit, push, watch GitHub Actions, and update the story issue with the commit hash and CI run link.
