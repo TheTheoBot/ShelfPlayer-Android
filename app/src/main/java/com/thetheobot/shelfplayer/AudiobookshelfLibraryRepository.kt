@@ -86,7 +86,7 @@ class AudiobookshelfLibraryRepository(
     private fun loadLibraryItemDetail(credentials: ConnectionCredentials, itemId: String): LibraryItemDetail? {
         val normalizedServerUrl = normalizeServerUrl(credentials.serverUrl)
         val token = credentials.accessToken.trim()
-        val detailUrl = URL("$normalizedServerUrl/api/items/$itemId")
+        val detailUrl = URL("$normalizedServerUrl/api/items/${encodeUrlPathSegment(itemId)}")
         val detailJson = executeGet(detailUrl, token)
         return parseLibraryItemDetail(detailJson, normalizedServerUrl)
     }

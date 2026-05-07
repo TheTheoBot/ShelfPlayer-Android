@@ -188,9 +188,11 @@ fun ShelfPlayerApp() {
         return detail.chapters.firstOrNull { it.id == chapterId }?.startSeconds
     }
 
-    fun buildStreamUrl(itemId: String): String? {
+    fun buildStreamUrl(itemId: String, accessToken: String): String? {
         val server = connectionCredentials?.serverUrl?.takeIf { it.isNotBlank() } ?: return null
-        return "${normalizeServerUrl(server)}/api/items/${encodeUrlPathSegment(itemId)}/play"
+        val encodedItemId = encodeUrlPathSegment(itemId)
+        val encodedToken = encodeUrlPathSegment(accessToken)
+        return "${normalizeServerUrl(server)}/api/items/$encodedItemId/play?token=$encodedToken"
     }
 
     fun applyPlaybackRate(player: android.media.MediaPlayer, rate: Float) {
@@ -238,8 +240,8 @@ fun ShelfPlayerApp() {
     }
 
     fun startPlayback(itemId: String, startPositionSeconds: Int? = selectedChapterStartSeconds) {
-        val streamUrl = buildStreamUrl(itemId)
         val token = connectionCredentials?.accessToken?.takeIf { it.isNotBlank() }
+        val streamUrl = token?.let { buildStreamUrl(itemId, it) }
         if (streamUrl == null || token == null) {
             playbackError = "Fehlende Verbindung oder kein Titel ausgewählt"
             return
