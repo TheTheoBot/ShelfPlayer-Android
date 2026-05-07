@@ -1,79 +1,97 @@
-# Implementation Log
+     1|# Implementation Log
+     2|
+     3|## 2026-05-07T07:17:00Z
+     4|- Story/Issue: #1 — Story: Harden connection onboarding URL validation
+     5|- Implemented:
+     6|  - Hardened `validateServerUrl` to reject missing-scheme and malformed URL inputs while keeping valid HTTPS URLs and local development HTTP URLs accepted.
+     7|  - Added regression coverage for missing scheme and malformed URL parsing.
+     8|  - Added GitHub Actions workflow for Android unit tests on push and pull request to `main`.
+     9|- Verification:
+    10|  - `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
+    11|  - Added CI workflow to run the same Gradle unit test job on GitHub Actions.
+    12|- Commit(s):
+    13|  - `f413103` — feat: harden connection URL validation
+    14|  - `13edbe2` — ci: add Android unit test workflow
+    15|  - `5bc6a1e` — ci: rename Android unit test workflow
+    16|  - `30fef45` — ci: fix Android unit test workflow
+    17|  - `0e49cd2` — test: fix malformed URL regression case
+    18|- Next step:
+    19|  - Push to `main`, monitor the GitHub Actions run, and continue expanding connection/auth coverage.
+    20|
+    21|## 2026-05-07T08:23:55Z
+    22|- Story/Issue: #1 — Story: Harden connection onboarding URL validation
+    23|- Implemented:
+    24|  - Introduced a shared `ConnectionSession` model so the remembered server URL can be read by multiple screens.
+    25|  - Hoisted connection state into `ShelfPlayerApp`, surfaced the saved server in the top bar and the Library screen, and prefilled the Connect tab from the remembered server.
+    26|  - Tightened URL handling by rejecting embedded credentials and clearing the access token after a successful save.
+    27|  - Added regression coverage for the new connection-session status text and the credential-rejection rule.
+    28|- Verification:
+    29|  - `git diff --check` ✅
+    30|  - `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
+    31|- Commit(s):
+    32|  - `b0a2896` — feat: share remembered connection state
+    33|- Next step:
+    34|  - Push the run to `main`, monitor GitHub Actions, and continue toward real connection/auth persistence.
+    35|
+    36|## 2026-05-07T08:32:40Z
+    37|- Story/Issue: #1 — Story: Harden connection onboarding URL validation
+    38|- Implemented:
+    39|  - Fixed the Connect screen imports so the Compose state helpers resolve correctly in CI.
+    40|- Verification:
+    41|  - `git diff --check` ✅
+    42|  - GitHub Actions run `25484817650` (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25484817650
+    43|  - GitHub Actions run `25484817607` (Android Debug Build) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25484817607
+    44|  - GitHub Actions run `25484817608` (Android Unit Tests) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25484817608
+    45|  - GitHub Actions run `25484817623` (Android APK) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25484817623
+    46|- Commit(s):
+    47|  - `88056b0` — fix: restore connection screen compose imports
+    48|- Next step:
+    49|  - Update the story issue with the successful run and continue toward actual auth persistence.
+    50|
+    51|## 2026-05-07T09:15:21Z
+    52|- Story/Issue: #1 — Story: Harden connection onboarding URL validation
+    53|- Implemented:
+    54|  - Added encrypted connection credential persistence with AndroidX Security so the server URL and access token survive app restarts without storing them in cleartext.
+    55|  - Loaded saved credentials at app startup and used the remembered server URL to initialize the app shell, top bar, and Library connection status.
+    56|  - Split onboarding into explicit "Verbindung testen" and "Speichern & weiter" actions with a pure form-validation helper and safe success/status text helpers.
+    57|  - Extended JVM coverage for the new validation helper and safe status text behavior.
+    58|- Verification:
+    59|  - `git diff --check` ✅
+    60|  - `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
+    61|- Next step:
+    62|  - Run Android unit tests in CI and continue toward real Audiobookshelf auth/session wiring.
+    63|
+    64|## 2026-05-07T11:07:55Z
+    65|- Story/Issue: #1 — Story: Harden connection onboarding URL validation
+    66|- Implemented:
+    67|  - Added a remote connection test helper and explicit connection screen/app root state phases so the onboarding flow matches the MVP spec more closely.
+    68|  - Moved cleartext allowance into the debug manifest, keeping release manifests stricter while still allowing local development HTTP URLs.
+    69|  - Tightened connection verification and persistence handling with cancellation-safe coroutine wrapping, normalized saved URLs, and broader unit coverage for HTTP status handling.
+    70|  - Added a small coroutine helper for cancellation-preserving `runCatching` usage and updated the implementation log story slice.
+    71|- Verification:
+    72|  - `git diff --check` ✅
+    73|  - Local Gradle build/test unavailable because `java` is not installed in this environment.
+    74|  - Independent spec review: PASS
+    75|  - Independent code quality review: APPROVED
+    76|- Commit(s):
+    77|  - `a626946` — feat: harden connection onboarding and verification
+    78|- Next step:
+    79|  - Commit, push, watch GitHub Actions, and update the story issue with the commit hash and CI run link.
+    80|
 
-## 2026-05-07T07:17:00Z
+## 2026-05-07T12:12:37Z
 - Story/Issue: #1 — Story: Harden connection onboarding URL validation
 - Implemented:
-  - Hardened `validateServerUrl` to reject missing-scheme and malformed URL inputs while keeping valid HTTPS URLs and local development HTTP URLs accepted.
-  - Added regression coverage for missing scheme and malformed URL parsing.
-  - Added GitHub Actions workflow for Android unit tests on push and pull request to `main`.
-- Verification:
-  - `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
-  - Added CI workflow to run the same Gradle unit test job on GitHub Actions.
-- Commit(s):
-  - `f413103` — feat: harden connection URL validation
-  - `13edbe2` — ci: add Android unit test workflow
-  - `5bc6a1e` — ci: rename Android unit test workflow
-  - `30fef45` — ci: fix Android unit test workflow
-  - `0e49cd2` — test: fix malformed URL regression case
-- Next step:
-  - Push to `main`, monitor the GitHub Actions run, and continue expanding connection/auth coverage.
-
-## 2026-05-07T08:23:55Z
-- Story/Issue: #1 — Story: Harden connection onboarding URL validation
-- Implemented:
-  - Introduced a shared `ConnectionSession` model so the remembered server URL can be read by multiple screens.
-  - Hoisted connection state into `ShelfPlayerApp`, surfaced the saved server in the top bar and the Library screen, and prefilled the Connect tab from the remembered server.
-  - Tightened URL handling by rejecting embedded credentials and clearing the access token after a successful save.
-  - Added regression coverage for the new connection-session status text and the credential-rejection rule.
+  - Added explicit app-root onboarding handling so first launch now shows the connection screen instead of the tab shell.
+  - Added retryable app-shell error states for credential-store initialization failures and load failures.
+  - Added pure root-state helpers plus JVM coverage for loading, onboarding, load-error, ready, and fatal-error paths.
 - Verification:
   - `git diff --check` ✅
-  - `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
-- Commit(s):
-  - `b0a2896` — feat: share remembered connection state
-- Next step:
-  - Push the run to `main`, monitor GitHub Actions, and continue toward real connection/auth persistence.
-
-## 2026-05-07T08:32:40Z
-- Story/Issue: #1 — Story: Harden connection onboarding URL validation
-- Implemented:
-  - Fixed the Connect screen imports so the Compose state helpers resolve correctly in CI.
-- Verification:
-  - `git diff --check` ✅
-  - GitHub Actions run `25484817650` (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25484817650
-  - GitHub Actions run `25484817607` (Android Debug Build) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25484817607
-  - GitHub Actions run `25484817608` (Android Unit Tests) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25484817608
-  - GitHub Actions run `25484817623` (Android APK) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25484817623
-- Commit(s):
-  - `88056b0` — fix: restore connection screen compose imports
-- Next step:
-  - Update the story issue with the successful run and continue toward actual auth persistence.
-
-## 2026-05-07T09:15:21Z
-- Story/Issue: #1 — Story: Harden connection onboarding URL validation
-- Implemented:
-  - Added encrypted connection credential persistence with AndroidX Security so the server URL and access token survive app restarts without storing them in cleartext.
-  - Loaded saved credentials at app startup and used the remembered server URL to initialize the app shell, top bar, and Library connection status.
-  - Split onboarding into explicit "Verbindung testen" and "Speichern & weiter" actions with a pure form-validation helper and safe success/status text helpers.
-  - Extended JVM coverage for the new validation helper and safe status text behavior.
-- Verification:
-  - `git diff --check` ✅
-  - `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
-- Next step:
-  - Run Android unit tests in CI and continue toward real Audiobookshelf auth/session wiring.
-
-## 2026-05-07T11:07:55Z
-- Story/Issue: #1 — Story: Harden connection onboarding URL validation
-- Implemented:
-  - Added a remote connection test helper and explicit connection screen/app root state phases so the onboarding flow matches the MVP spec more closely.
-  - Moved cleartext allowance into the debug manifest, keeping release manifests stricter while still allowing local development HTTP URLs.
-  - Tightened connection verification and persistence handling with cancellation-safe coroutine wrapping, normalized saved URLs, and broader unit coverage for HTTP status handling.
-  - Added a small coroutine helper for cancellation-preserving `runCatching` usage and updated the implementation log story slice.
-- Verification:
-  - `git diff --check` ✅
-  - Local Gradle build/test unavailable because `java` is not installed in this environment.
   - Independent spec review: PASS
   - Independent code quality review: APPROVED
+  - Local Gradle execution is still blocked here because `java` is not installed.
+  - GitHub Actions verification: pending after push.
 - Commit(s):
-  - `a626946` — feat: harden connection onboarding and verification
+  - `c01d73d` — feat: add onboarding root-state handling
 - Next step:
-  - Commit, push, watch GitHub Actions, and update the story issue with the commit hash and CI run link.
+  - Push to `main`, watch GitHub Actions, and add the CI run link plus issue update once the workflow finishes.
