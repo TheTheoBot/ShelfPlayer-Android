@@ -25,6 +25,11 @@ class InMemoryLibraryRepository(
         }
     }
 
+    override suspend fun search(query: String): List<LibraryItem> {
+        val currentItems = _libraryFeedState.value.visibleItems().ifEmpty { seedItems }
+        return searchLibraryItems(currentItems, query)
+    }
+
     override suspend fun getItemDetail(itemId: String): LibraryItemDetail? {
         return seedDetailsById[itemId]
     }

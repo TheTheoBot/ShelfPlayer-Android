@@ -159,6 +159,69 @@ class LibraryRepositoryTest {
     }
 
     @Test
+    fun `search helper matches title author and id tokens case insensitively`() {
+        val items = listOf(
+            LibraryItem(
+                id = "project-hail-mary",
+                title = "Project Hail Mary",
+                author = "Andy Weir",
+                progressPercent = 82,
+                itemType = LibraryItemType.Audiobook,
+            ),
+            LibraryItem(
+                id = "clean-architecture",
+                title = "Clean Architecture",
+                author = "Robert C. Martin",
+                progressPercent = 23,
+                itemType = LibraryItemType.Book,
+            ),
+        )
+
+        assertEquals(listOf("project-hail-mary"), searchLibraryItems(items, "hail").map { it.id })
+        assertEquals(listOf("clean-architecture"), searchLibraryItems(items, "robert").map { it.id })
+        assertEquals(listOf("project-hail-mary"), searchLibraryItems(items, "PROJECT mary").map { it.id })
+        assertTrue(searchLibraryItems(items, "   ").isEmpty())
+    }
+
+    @Test
+    fun `search state helper formats idle searching results empty and error states`() {
+        val resultsState = SearchState.Results(
+            query = "project",
+            items = listOf(
+                LibraryItem(
+                    id = "project-hail-mary",
+                    title = "Project Hail Mary",
+                    author = "Andy Weir",
+                    progressPercent = 82,
+                    itemType = LibraryItemType.Audiobook,
+                ),
+            ),
+        )
+
+        assertEquals("Suche in deiner Bibliothek", searchStateTitle(SearchState.Idle))
+        assertEquals("Bestätige mit Suchen oder der Enter-Taste.", searchStateMessage(SearchState.Typing("project")))
+        assertEquals("Suche läuft…", searchStateTitle(SearchState.Searching("project")))
+        assertEquals("1 Treffer für \"project\"", searchStateTitle(resultsState))
+        assertEquals(
+            "Titel, Autor und ID werden lokal in der aktuellen Bibliothek gefiltert.",
+            searchStateMessage(resultsState),
+        )
+        assertEquals("Keine Treffer für \"project\"", searchStateTitle(SearchState.NoResults("project")))
+        assertEquals("Bitte später erneut versuchen.", searchStateMessage(SearchState.Error(query = "project", message = "   ")))
+        assertEquals(listOf("project-hail-mary"), resultsState.resultsOrEmpty().map { it.id })
+    }
+
+    @Test
+    fun `in memory repository search filters the loaded items`() = runBlocking {
+        val repository = InMemoryLibraryRepository()
+
+        repository.refresh()
+
+        assertEquals(listOf("project-hail-mary"), repository.search("hail").map { it.id })
+        assertEquals(listOf("clean-architecture"), repository.search("robert").map { it.id })
+    }
+
+    @Test
     fun `in memory repository refresh exposes a refreshing state before restoring the sample feed`() = runBlocking {
         val refreshGate = CompletableDeferred<Unit>()
         val repository = InMemoryLibraryRepository(refreshPause = { refreshGate.await() })
