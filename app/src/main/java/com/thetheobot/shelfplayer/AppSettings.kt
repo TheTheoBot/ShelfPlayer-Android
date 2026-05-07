@@ -60,9 +60,17 @@ class SharedPreferencesAppSettingsRepository(
     }
 
     private fun readSettings(): AppSettings {
+        val persistedSkipInterval = sharedPreferences
+            .getInt(KEY_PLAYBACK_SKIP_INTERVAL_SECONDS, AppSettings.DEFAULT_PLAYBACK_SKIP_INTERVAL_SECONDS)
+
+        val normalizedPersistedSkipInterval = if (persistedSkipInterval == 0) {
+            AppSettings.DEFAULT_PLAYBACK_SKIP_INTERVAL_SECONDS
+        } else {
+            persistedSkipInterval
+        }
+
         return AppSettings(
-            playbackSkipIntervalSeconds = sharedPreferences
-                .getInt(KEY_PLAYBACK_SKIP_INTERVAL_SECONDS, AppSettings.DEFAULT_PLAYBACK_SKIP_INTERVAL_SECONDS),
+            playbackSkipIntervalSeconds = normalizedPersistedSkipInterval,
             defaultPlaybackRate = sharedPreferences
                 .getFloat(KEY_DEFAULT_PLAYBACK_RATE, AppSettings.DEFAULT_PLAYBACK_RATE),
             themeMode = sharedPreferences
@@ -73,14 +81,8 @@ class SharedPreferencesAppSettingsRepository(
     }
 
     private fun AppSettings.normalized(): AppSettings {
-        val normalizedSkipInterval = when {
-            playbackSkipIntervalSeconds == 0 -> AppSettings.DEFAULT_PLAYBACK_SKIP_INTERVAL_SECONDS
-            playbackSkipIntervalSeconds < 0 -> 1
-            else -> playbackSkipIntervalSeconds
-        }
-
         return copy(
-            playbackSkipIntervalSeconds = normalizedSkipInterval,
+            playbackSkipIntervalSeconds = playbackSkipIntervalSeconds.coerceAtLeast(1),
             defaultPlaybackRate = defaultPlaybackRate.takeIf { it.isFinite() && it > 0f }
                 ?: AppSettings.DEFAULT_PLAYBACK_RATE,
         )
