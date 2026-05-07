@@ -12,5 +12,6 @@
 - Commit(s):
   - `f413103` — feat: harden connection URL validation
   - `13edbe2` — ci: add Android unit test workflow
+  - `5bc6a1e` — ci: rename Android unit test workflow
 - Next step:
   - Push to `main`, monitor the GitHub Actions run, and continue expanding connection/auth coverage.
