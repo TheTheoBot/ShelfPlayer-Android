@@ -22,7 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -169,6 +169,7 @@ fun ConnectionScreen(
         )
 
         if (bannerMessage != null) {
+            val currentBannerMessage = bannerMessage
             Card(
                 colors = CardDefaults.elevatedCardColors(
                     containerColor = if (bannerIsError) {
@@ -188,7 +189,7 @@ fun ConnectionScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(if (bannerIsError) "Verbindung konnte nicht geprüft werden" else "Verbindung geprüft")
-                    Text(bannerMessage!!)
+                    Text(currentBannerMessage ?: "")
                 }
             }
         }
@@ -196,8 +197,8 @@ fun ConnectionScreen(
         OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
             value = serverUrl,
-            onValueChange = {
-                serverUrl = it
+            onValueChange = { newValue ->
+                serverUrl = newValue
                 markEditing()
             },
             label = { Text("Server-URL") },
@@ -212,8 +213,8 @@ fun ConnectionScreen(
         OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
             value = accessToken,
-            onValueChange = {
-                accessToken = it
+            onValueChange = { newValue ->
+                accessToken = newValue
                 markEditing()
             },
             label = { Text("Access Token") },

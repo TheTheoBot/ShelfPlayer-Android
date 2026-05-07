@@ -3,7 +3,7 @@ package com.thetheobot.shelfplayer
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import androidx.security.crypto.MasterKeys
 
 private const val CONNECTION_PREFS_FILE = "connection_credentials"
 private const val KEY_SERVER_URL = "server_url"
@@ -46,14 +46,12 @@ class EncryptedConnectionCredentialsStore(
     companion object {
         fun create(context: Context): ConnectionCredentialsStore {
             val appContext = context.applicationContext
-            val masterKey = MasterKey.Builder(appContext)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
+            val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
 
             val sharedPreferences = EncryptedSharedPreferences.create(
                 appContext,
                 CONNECTION_PREFS_FILE,
-                masterKey,
+                masterKeyAlias,
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
             )
