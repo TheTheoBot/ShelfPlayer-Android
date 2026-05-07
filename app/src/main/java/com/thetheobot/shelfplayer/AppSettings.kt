@@ -73,8 +73,14 @@ class SharedPreferencesAppSettingsRepository(
     }
 
     private fun AppSettings.normalized(): AppSettings {
+        val normalizedSkipInterval = when {
+            playbackSkipIntervalSeconds == 0 -> AppSettings.DEFAULT_PLAYBACK_SKIP_INTERVAL_SECONDS
+            playbackSkipIntervalSeconds < 0 -> 1
+            else -> playbackSkipIntervalSeconds
+        }
+
         return copy(
-            playbackSkipIntervalSeconds = playbackSkipIntervalSeconds.coerceAtLeast(1),
+            playbackSkipIntervalSeconds = normalizedSkipInterval,
             defaultPlaybackRate = defaultPlaybackRate.takeIf { it.isFinite() && it > 0f }
                 ?: AppSettings.DEFAULT_PLAYBACK_RATE,
         )

@@ -14,8 +14,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Headphones
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -56,6 +57,7 @@ import java.util.Locale
 
 private enum class AppTab(val label: String) {
     Library("Library"),
+    Search("Search"),
     Connect("Connect"),
     Player("Player"),
     Settings("Settings"),
@@ -587,6 +589,12 @@ fun ShelfPlayerApp() {
                                 label = { Text(AppTab.Library.label) },
                             )
                             NavigationBarItem(
+                                selected = selectedTab == AppTab.Search,
+                                onClick = { selectedTab = AppTab.Search },
+                                icon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                                label = { Text(AppTab.Search.label) },
+                            )
+                            NavigationBarItem(
                                 selected = selectedTab == AppTab.Connect,
                                 onClick = { selectedTab = AppTab.Connect },
                                 icon = { Icon(Icons.Rounded.Link, contentDescription = null) },
@@ -664,6 +672,18 @@ fun ShelfPlayerApp() {
                                 )
                             }
                         }
+                        AppTab.Search -> SearchScreen(
+                            padding = padding,
+                            repository = libraryRepository,
+                            onResultClick = { itemId ->
+                                selectedLibraryItemId = itemId
+                                selectedLibraryItemDetailState = ItemDetailState.Loading
+                                selectedChapterId = null
+                                selectedChapterStartSeconds = null
+                                selectedLibraryItemDetailReloadKey++
+                                selectedTab = AppTab.Library
+                            },
+                        )
                         AppTab.Connect -> ConnectionScreen(
                             padding = padding,
                             connectionSession = connectionSession,

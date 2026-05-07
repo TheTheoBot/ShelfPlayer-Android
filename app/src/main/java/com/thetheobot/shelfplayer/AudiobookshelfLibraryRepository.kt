@@ -50,6 +50,10 @@ class AudiobookshelfLibraryRepository(
         )
     }
 
+    override suspend fun search(query: String): List<LibraryItem> {
+        return searchLibraryItems(_libraryFeedState.value.visibleItems(), query)
+    }
+
     override suspend fun getItemDetail(itemId: String): LibraryItemDetail? {
         val credentials = connectionProvider()
             ?: throw IOException("Keine gespeicherte Verbindung vorhanden")
