@@ -37,6 +37,29 @@ class ConnectionValidationTest {
     }
 
     @Test
+    fun `validateServerUrl accepts uppercase https scheme`() {
+        assertNull(validateServerUrl("HTTPS://books.example.com"))
+    }
+
+    @Test
+    fun `validateServerUrl rejects uppercase remote http url`() {
+        assertEquals(
+            "Server-URL muss mit https:// beginnen",
+            validateServerUrl("HTTP://books.example.com"),
+        )
+    }
+
+    @Test
+    fun `validateServerUrl accepts local http url for localhost development`() {
+        assertNull(validateServerUrl("HTTP://localhost:1337"))
+    }
+
+    @Test
+    fun `validateServerUrl accepts local http url for emulator development`() {
+        assertNull(validateServerUrl("http://10.0.2.2:1337"))
+    }
+
+    @Test
     fun `validateAccessToken rejects blanks`() {
         assertEquals("Access Token fehlt", validateAccessToken("   "))
     }

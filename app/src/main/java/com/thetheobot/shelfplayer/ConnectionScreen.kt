@@ -29,13 +29,13 @@ private const val CONNECT_HINT = "Beispiel: https://books.example.com"
 fun normalizeServerUrl(raw: String): String = raw.trim().trimEnd('/')
 
 fun validateServerUrl(raw: String): String? {
-    val normalized = normalizeServerUrl(raw)
-    if (normalized.isBlank()) return "Server-URL fehlt"
+    val trimmed = raw.trim()
+    if (trimmed.isBlank()) return "Server-URL fehlt"
 
-    val uri = runCatching { java.net.URI(normalized) }.getOrNull()
+    val uri = runCatching { java.net.URI(trimmed) }.getOrNull()
         ?: return "Server-URL ist ungültig"
 
-    if (uri.scheme != "http" && uri.scheme != "https") {
+    if (!uri.scheme.equals("http", ignoreCase = true) && !uri.scheme.equals("https", ignoreCase = true)) {
         return "Server-URL muss mit http:// oder https:// beginnen"
     }
 
@@ -43,7 +43,21 @@ fun validateServerUrl(raw: String): String? {
         return "Server-URL braucht einen Hostnamen"
     }
 
+    if (uri.scheme.equals("http", ignoreCase = true) && !isLocalDevelopmentHost(uri.host)) {
+        return "Server-URL muss mit https:// beginnen"
+    }
+
     return null
+}
+
+private fun isLocalDevelopmentHost(host: String?): Boolean {
+    return when (host?.lowercase()) {
+        "localhost",
+        "127.0.0.1",
+        "::1",
+        "10.0.2.2" -> true
+        else -> false
+    }
 }
 
 fun validateAccessToken(raw: String): String? {
@@ -53,7 +67,7 @@ fun validateAccessToken(raw: String): String? {
 @Composable
 fun ConnectionScreen(padding: PaddingValues) {
     var serverUrl by rememberSaveable { mutableStateOf("") }
-    var accessToken by remember { mutableStateOf("") }
+    var accessToken by rememberSaveable { mutableStateOf("") }
     var savedServerUrl by rememberSaveable { mutableStateOf("") }
     var connectionSaved by rememberSaveable { mutableStateOf(false) }
     var attemptedSave by rememberSaveable { mutableStateOf(false) }
@@ -114,12 +128,11 @@ fun ConnectionScreen(padding: PaddingValues) {
         Button(
             onClick = {
                 attemptedSave = true
-                val normalizedUrl = normalizeServerUrl(serverUrl)
-                val urlError = validateServerUrl(normalizedUrl)
+                val urlError = validateServerUrl(serverUrl)
                 val tokenError = validateAccessToken(accessToken)
 
                 if (urlError == null && tokenError == null) {
-                    savedServerUrl = normalizedUrl
+                    savedServerUrl = normalizeServerUrl(serverUrl)
                     connectionSaved = true
                     attemptedSave = false
                 }
