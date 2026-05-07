@@ -4,8 +4,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.doubleOrNull
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -49,15 +55,16 @@ class AudiobookshelfLibraryRepository(
 
         val librariesUrl = URL("$normalizedServerUrl/api/libraries")
         val librariesJson = executeGet(librariesUrl, token)
-        val libraries = JSONObject(librariesJson).optJSONArray("libraries") ?: JSONArray()
+        val librariesRoot = Json.parseToJsonElement(librariesJson).jsonObject
+        val libraries = librariesRoot["libraries"]?.jsonArray ?: JsonArray(emptyList())
 
-        if (libraries.length() == 0) {
+        if (libraries.isEmpty()) {
             return emptyList()
         }
 
-        val firstLibrary = libraries.optJSONObject(0)
+        val firstLibrary = libraries.firstOrNull()?.jsonObject
             ?: throw IOException("Keine gültige Audiobookshelf-Library gefunden")
-        val libraryId = firstLibrary.optString("id").ifBlank {
+        val libraryId = firstLibrary.stringValue("id").ifBlank {
             throw IOException("Audiobookshelf-Library-ID fehlt")
         }
 
@@ -90,22 +97,22 @@ class AudiobookshelfLibraryRepository(
 }
 
 internal fun parseLibraryItems(payload: String, serverBaseUrl: String): List<LibraryItem> {
-    val root = JSONObject(payload)
-    val array = root.optJSONArray("results") ?: root.optJSONArray("items") ?: JSONArray()
+    val root = Json.parseToJsonElement(payload).jsonObject
+    val array = root["results"]?.jsonArray ?: root["items"]?.jsonArray ?: JsonArray(emptyList())
 
     return buildList {
-        for (index in 0 until array.length()) {
-            val row = array.optJSONObject(index) ?: continue
-            val id = row.optString("id")
+        for (rowElement in array) {
+            val row = rowElement.jsonObject
+            val id = row.stringValue("id")
             if (id.isBlank()) continue
-            val media = row.optJSONObject("media")
 
-            val title = row.optString("title").ifBlank { "Unbenannter Titel" }
+            val media = row["media"]?.jsonObject
+            val title = row.stringValue("title").ifBlank { "Unbenannter Titel" }
             val author = resolveAuthor(row, media)
             val progressPercent = resolveProgressPercent(row)
-            val itemType = resolveItemType(row.optString("mediaType"))
+            val itemType = resolveItemType(row.stringValue("mediaType"))
 
-            val coverPath = row.optString("coverPath")
+            val coverPath = row.stringValue("coverPath")
             val coverUrl = if (coverPath.isBlank()) {
                 "$serverBaseUrl/api/items/$id/cover"
             } else {
@@ -126,27 +133,27 @@ internal fun parseLibraryItems(payload: String, serverBaseUrl: String): List<Lib
     }
 }
 
-private fun resolveAuthor(row: JSONObject, media: JSONObject?): String {
-    val directAuthor = row.optString("authorName")
+private fun resolveAuthor(row: JsonObject, media: JsonObject?): String {
+    val directAuthor = row.stringValue("authorName")
     if (directAuthor.isNotBlank()) return directAuthor
 
-    val mediaAuthor = media?.optString("authorName")
-    if (!mediaAuthor.isNullOrBlank()) return mediaAuthor
+    val mediaAuthor = media?.stringValue("authorName").orEmpty()
+    if (mediaAuthor.isNotBlank()) return mediaAuthor
 
-    val metadataAuthor = media?.optJSONObject("metadata")?.optString("authorName")
-    if (!metadataAuthor.isNullOrBlank()) return metadataAuthor
+    val metadataAuthor = media?.get("metadata")?.jsonObject?.stringValue("authorName").orEmpty()
+    if (metadataAuthor.isNotBlank()) return metadataAuthor
 
     return "Unbekannt"
 }
 
-private fun resolveProgressPercent(row: JSONObject): Int {
-    val progress = row.optDouble("progress", Double.NaN)
-    if (!progress.isNaN()) {
+private fun resolveProgressPercent(row: JsonObject): Int {
+    val progress = row.doubleValue("progress")
+    if (progress != null) {
         return (progress * 100).toInt().coerceIn(0, 100)
     }
 
-    val progressLastUpdate = row.optJSONObject("progressLastUpdate")?.optDouble("progress", Double.NaN)
-    if (progressLastUpdate != null && !progressLastUpdate.isNaN()) {
+    val progressLastUpdate = row["progressLastUpdate"]?.jsonObject?.doubleValue("progress")
+    if (progressLastUpdate != null) {
         return (progressLastUpdate * 100).toInt().coerceIn(0, 100)
     }
 
@@ -160,4 +167,12 @@ private fun resolveItemType(mediaType: String): LibraryItemType {
         "book", "ebook" -> LibraryItemType.Book
         else -> LibraryItemType.Audiobook
     }
+}
+
+private fun JsonObject.stringValue(key: String): String {
+    return (this[key] as? JsonPrimitive)?.content.orEmpty()
+}
+
+private fun JsonObject.doubleValue(key: String): Double? {
+    return (this[key] as? JsonPrimitive)?.doubleOrNull
 }
