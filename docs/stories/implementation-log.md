@@ -32,3 +32,18 @@
   - `b0a2896` — feat: share remembered connection state
 - Next step:
   - Push the run to `main`, monitor GitHub Actions, and continue toward real connection/auth persistence.
+
+## 2026-05-07T08:32:40Z
+- Story/Issue: #1 — Story: Harden connection onboarding URL validation
+- Implemented:
+  - Fixed the Connect screen imports so the Compose state helpers resolve correctly in CI.
+- Verification:
+  - `git diff --check` ✅
+  - GitHub Actions run `25484817650` (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25484817650
+  - GitHub Actions run `25484817607` (Android Debug Build) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25484817607
+  - GitHub Actions run `25484817608` (Android Unit Tests) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25484817608
+  - GitHub Actions run `25484817623` (Android APK) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25484817623
+- Commit(s):
+  - `88056b0` — fix: restore connection screen compose imports
+- Next step:
+  - Update the story issue with the successful run and continue toward actual auth persistence.
