@@ -96,7 +96,8 @@ internal fun parseLibraryItems(payload: String, serverBaseUrl: String): List<Lib
     return buildList {
         for (index in 0 until array.length()) {
             val row = array.optJSONObject(index) ?: continue
-            val id = row.optString("id").ifBlank { continue }
+            val id = row.optString("id")
+            if (id.isBlank()) continue
             val media = row.optJSONObject("media")
 
             val title = row.optString("title").ifBlank { "Unbenannter Titel" }
