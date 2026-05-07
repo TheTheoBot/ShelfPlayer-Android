@@ -27,8 +27,16 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Make Gradle wrapper executable
-        run: chmod +x ./gradlew
+      - name: Install Android SDK components
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Install Gradle 8.10.2
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.10.2
+          validate-wrappers: false
 
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest
+        run: gradle testDebugUnitTest
