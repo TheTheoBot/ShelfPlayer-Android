@@ -70,6 +70,24 @@ internal fun formatChapterRange(startSeconds: Int?, endSeconds: Int?): String {
     }
 }
 
+internal fun selectedChapterDisplayLabel(
+    chapters: List<LibraryChapter>,
+    selectedChapterId: String?,
+): String? {
+    val chapterId = selectedChapterId?.trim().orEmpty()
+    if (chapterId.isBlank()) {
+        return null
+    }
+
+    val chapter = chapters.firstOrNull { it.id == chapterId } ?: return "Ausgewähltes Kapitel"
+    val chapterRange = formatChapterRange(chapter.startSeconds, chapter.endSeconds)
+
+    return listOfNotNull(
+        chapter.title.trim().takeIf { it.isNotBlank() },
+        chapterRange.takeIf { it.isNotBlank() },
+    ).joinToString(" · ").ifBlank { "Ausgewähltes Kapitel" }
+}
+
 private fun formatChapterTime(seconds: Int): String {
     val clampedSeconds = seconds.coerceAtLeast(0)
     val minutes = clampedSeconds / 60

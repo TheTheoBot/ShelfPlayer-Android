@@ -44,6 +44,31 @@ private enum class AppTab(val label: String) {
     Player("Player"),
 }
 
+internal fun playbackActionLabel(
+    playbackActiveItemId: String?,
+    itemId: String,
+    isPreparingPlayback: Boolean,
+    isPlayingPlayback: Boolean,
+): String {
+    if (isPreparingPlayback && playbackActiveItemId == itemId) {
+        return "Lädt…"
+    }
+
+    return when {
+        playbackActiveItemId == itemId && isPlayingPlayback -> "Pause"
+        playbackActiveItemId == itemId -> "Resume"
+        else -> "Abspielen"
+    }
+}
+
+internal fun playbackActionEnabled(
+    playbackActiveItemId: String?,
+    itemId: String,
+    isPreparingPlayback: Boolean,
+): Boolean {
+    return !(isPreparingPlayback && playbackActiveItemId == itemId)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShelfPlayerApp() {
@@ -66,7 +91,14 @@ fun ShelfPlayerApp() {
     var selectedLibraryItemDetailReloadKey by rememberSaveable { mutableStateOf(0) }
     var selectedChapterId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedChapterStartSeconds by rememberSaveable { mutableStateOf<Int?>(null) }
-    var playbackRequestKey by rememberSaveable { mutableStateOf(0) }
+    var mediaPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
+    val connectionCredentials = rememberedConnection
+    var playbackActiveItemId by remember { mutableStateOf<String?>(null) }
+    var isPreparingPlayback by remember { mutableStateOf(false) }
+    var isPlayingPlayback by remember { mutableStateOf(false) }
+    var playbackError by remember { mutableStateOf<String?>(null) }
+    var playbackDurationMs by remember { mutableStateOf(0) }
+    var playbackPositionMs by remember { mutableStateOf(0) }
 
     fun resolveLibraryItem(itemId: String): LibraryItem? {
         val currentItems = when (val state = libraryFeedState) {
@@ -80,6 +112,119 @@ fun ShelfPlayerApp() {
     fun resolveSelectedChapterStartSeconds(chapterId: String): Int? {
         val detail = (selectedLibraryItemDetailState as? ItemDetailState.Loaded)?.detail ?: return null
         return detail.chapters.firstOrNull { it.id == chapterId }?.startSeconds
+    }
+
+    fun buildStreamUrl(itemId: String): String? {
+        val server = connectionCredentials?.serverUrl?.takeIf { it.isNotBlank() } ?: return null
+        return "${normalizeServerUrl(server)}/api/items/${android.net.Uri.encode(itemId)}/play"
+    }
+
+    fun releasePlayback() {
+        mediaPlayer?.release()
+        mediaPlayer = null
+        playbackActiveItemId = null
+        isPreparingPlayback = false
+        isPlayingPlayback = false
+        playbackDurationMs = 0
+        playbackPositionMs = 0
+        playbackError = null
+    }
+
+    fun startPlayback(itemId: String, startPositionSeconds: Int? = selectedChapterStartSeconds) {
+        val streamUrl = buildStreamUrl(itemId)
+        val token = connectionCredentials?.accessToken?.takeIf { it.isNotBlank() }
+        if (streamUrl == null || token == null) {
+            playbackError = "Fehlende Verbindung oder kein Titel ausgewählt"
+            return
+        }
+
+        releasePlayback()
+        playbackError = null
+
+        val player = android.media.MediaPlayer()
+        mediaPlayer = player
+        playbackActiveItemId = itemId
+        isPreparingPlayback = true
+
+        player.setOnPreparedListener {
+            isPreparingPlayback = false
+            playbackDurationMs = it.duration.coerceAtLeast(0)
+            val startPositionMs = startPositionSeconds?.coerceAtLeast(0)?.times(1000)
+            if (startPositionMs != null && startPositionMs in 0..playbackDurationMs) {
+                it.seekTo(startPositionMs)
+                playbackPositionMs = startPositionMs
+            } else {
+                playbackPositionMs = 0
+            }
+            it.start()
+            isPlayingPlayback = true
+        }
+        player.setOnCompletionListener {
+            isPlayingPlayback = false
+            playbackPositionMs = playbackDurationMs
+        }
+        player.setOnErrorListener { _, _, _ ->
+            releasePlayback()
+            playbackError = "Wiedergabe konnte nicht gestartet werden"
+            true
+        }
+
+        player.setDataSource(
+            context,
+            android.net.Uri.parse(streamUrl),
+            mapOf("Authorization" to "Bearer $token"),
+        )
+        player.prepareAsync()
+    }
+
+    fun pausePlayback() {
+        mediaPlayer?.takeIf { it.isPlaying }?.pause()
+        isPlayingPlayback = false
+    }
+
+    fun resumePlayback() {
+        val player = mediaPlayer ?: return
+        if (isPreparingPlayback) return
+        if (playbackDurationMs > 0 && playbackPositionMs >= playbackDurationMs) {
+            player.seekTo(0)
+            playbackPositionMs = 0
+        }
+        player.start()
+        isPlayingPlayback = true
+    }
+
+    fun togglePlayback(itemId: String, startPositionSeconds: Int? = selectedChapterStartSeconds) {
+        if (playbackActiveItemId != itemId || mediaPlayer == null) {
+            startPlayback(itemId, startPositionSeconds)
+            return
+        }
+
+        if (isPreparingPlayback) {
+            return
+        }
+
+        if (isPlayingPlayback) {
+            pausePlayback()
+        } else {
+            resumePlayback()
+        }
+    }
+
+    fun playbackActionLabelFor(itemId: String): String {
+        return playbackActionLabel(
+            playbackActiveItemId = playbackActiveItemId,
+            itemId = itemId,
+            isPreparingPlayback = isPreparingPlayback,
+            isPlayingPlayback = isPlayingPlayback,
+        )
+    }
+
+    fun playbackActionEnabledFor(itemId: String): Boolean {
+        return playbackActionEnabled(
+            playbackActiveItemId = playbackActiveItemId,
+            itemId = itemId,
+            isPreparingPlayback = isPreparingPlayback,
+        )
     }
 
     LaunchedEffect(context, initializationAttempt) {
@@ -124,6 +269,11 @@ fun ShelfPlayerApp() {
         connectionSession = connectionSession,
     )
 
+    val selectedChapterLabel = (selectedLibraryItemDetailState as? ItemDetailState.Loaded)
+        ?.detail
+        ?.chapters
+        ?.let { chapters -> selectedChapterId?.let { chapterId -> selectedChapterDisplayLabel(chapters, chapterId) } }
+
     LaunchedEffect(selectedLibraryItemId, selectedLibraryItemDetailReloadKey) {
         val itemId = selectedLibraryItemId ?: return@LaunchedEffect
         selectedLibraryItemDetailState = ItemDetailState.Loading
@@ -140,6 +290,18 @@ fun ShelfPlayerApp() {
                 ItemDetailState.Error(throwable.message ?: "Detaildaten konnten nicht geladen werden")
             },
         )
+    }
+    LaunchedEffect(mediaPlayer, isPlayingPlayback) {
+        while (mediaPlayer != null && isPlayingPlayback) {
+            playbackPositionMs = mediaPlayer?.currentPosition?.coerceAtLeast(0) ?: 0
+            kotlinx.coroutines.delay(500)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            releasePlayback()
+        }
     }
 
     MaterialTheme {
@@ -256,30 +418,30 @@ fun ShelfPlayerApp() {
                     when (selectedTab) {
                         AppTab.Library -> {
                             if (selectedLibraryItemId != null) {
+                                val currentItemId = selectedLibraryItemId ?: ""
                                 ItemDetailScreen(
                                     padding = padding,
                                     state = selectedLibraryItemDetailState,
+                                    selectedChapterId = selectedChapterId,
+                                    playbackActionLabel = playbackActionLabelFor(currentItemId),
+                                    playbackActionEnabled = playbackActionEnabledFor(currentItemId),
                                     onBackClick = {
                                         selectedLibraryItemId = null
-                                        selectedLibraryItemDetailState = ItemDetailState.Loading
-                                        selectedLibraryItemDetailReloadKey++
-                                        selectedChapterId = null
-                                        selectedChapterStartSeconds = null
                                     },
-                                    onPlayClick = { itemId ->
-                                        selectedLibraryItemId = itemId
-                                        selectedLibraryItemDetailState = ItemDetailState.Loading
-                                        selectedChapterId = null
-                                        selectedChapterStartSeconds = null
+                                    onPlaybackAction = {
                                         selectedTab = AppTab.Player
-                                        playbackRequestKey++
-                                        selectedLibraryItemDetailReloadKey++
+                                        selectedLibraryItemId?.let { itemId ->
+                                            togglePlayback(itemId, selectedChapterStartSeconds)
+                                        }
                                     },
                                     onChapterSelected = { chapterId ->
+                                        val startSeconds = resolveSelectedChapterStartSeconds(chapterId)
                                         selectedChapterId = chapterId
-                                        selectedChapterStartSeconds = resolveSelectedChapterStartSeconds(chapterId)
+                                        selectedChapterStartSeconds = startSeconds
                                         selectedTab = AppTab.Player
-                                        playbackRequestKey++
+                                        selectedLibraryItemId?.let { itemId ->
+                                            startPlayback(itemId, startSeconds)
+                                        }
                                     },
                                     onRetry = {
                                         selectedLibraryItemDetailReloadKey++
@@ -304,7 +466,7 @@ fun ShelfPlayerApp() {
                                         selectedChapterId = null
                                         selectedChapterStartSeconds = null
                                         selectedTab = AppTab.Player
-                                        playbackRequestKey++
+                                        startPlayback(itemId)
                                         selectedLibraryItemDetailReloadKey++
                                     },
                                 )
@@ -327,14 +489,33 @@ fun ShelfPlayerApp() {
                                 }
                             },
                         )
-                        AppTab.Player -> PlayerScreen(
-                            padding = padding,
-                            activeLibraryItem = selectedLibraryItemId?.let { resolveLibraryItem(it) },
-                            connectionCredentials = rememberedConnection,
-                            selectedChapterId = selectedChapterId,
-                            selectedChapterStartSeconds = selectedChapterStartSeconds,
-                            playbackRequestKey = playbackRequestKey,
-                        )
+                        AppTab.Player -> {
+                            val activePlaybackItem = (playbackActiveItemId ?: selectedLibraryItemId)?.let { resolveLibraryItem(it) }
+                            PlayerScreen(
+                                padding = padding,
+                                activeLibraryItem = activePlaybackItem,
+                                selectedChapterLabel = selectedChapterLabel,
+                                selectedChapterStartSeconds = selectedChapterStartSeconds,
+                                isPreparingPlayback = isPreparingPlayback,
+                                isPlayingPlayback = isPlayingPlayback,
+                                playbackError = playbackError,
+                                playbackDurationMs = playbackDurationMs,
+                                playbackPositionMs = playbackPositionMs,
+                                onPlay = {
+                                    activePlaybackItem?.id?.let { itemId ->
+                                        startPlayback(itemId, selectedChapterStartSeconds)
+                                    }
+                                },
+                                onPauseResume = {
+                                    if (isPlayingPlayback) {
+                                        pausePlayback()
+                                    } else {
+                                        resumePlayback()
+                                    }
+                                },
+                                onStop = { releasePlayback() },
+                            )
+                        }
                     }
                 }
             }
@@ -346,103 +527,17 @@ fun ShelfPlayerApp() {
 private fun PlayerScreen(
     padding: PaddingValues,
     activeLibraryItem: LibraryItem?,
-    connectionCredentials: ConnectionCredentials?,
-    selectedChapterId: String?,
+    selectedChapterLabel: String?,
     selectedChapterStartSeconds: Int?,
-    playbackRequestKey: Int,
+    isPreparingPlayback: Boolean,
+    isPlayingPlayback: Boolean,
+    playbackError: String?,
+    playbackDurationMs: Int,
+    playbackPositionMs: Int,
+    onPlay: () -> Unit,
+    onPauseResume: () -> Unit,
+    onStop: () -> Unit,
 ) {
-    val context = LocalContext.current
-    var mediaPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
-    var isPreparing by remember { mutableStateOf(false) }
-    var isPlaying by remember { mutableStateOf(false) }
-    var playbackError by remember { mutableStateOf<String?>(null) }
-    var durationMs by remember { mutableStateOf(0) }
-    var positionMs by remember { mutableStateOf(0) }
-    var lastHandledPlaybackRequestKey by rememberSaveable { mutableStateOf(0) }
-
-    val itemId = activeLibraryItem?.id
-    val streamUrl = remember(itemId, connectionCredentials) {
-        val server = connectionCredentials?.serverUrl?.takeIf { it.isNotBlank() } ?: return@remember null
-        val id = itemId ?: return@remember null
-        "${normalizeServerUrl(server)}/api/items/$id/play"
-    }
-
-    fun releasePlayer() {
-        mediaPlayer?.release()
-        mediaPlayer = null
-        isPreparing = false
-        isPlaying = false
-        durationMs = 0
-        positionMs = 0
-    }
-
-    fun startPlayback(startPositionSeconds: Int? = selectedChapterStartSeconds) {
-        val url = streamUrl
-        val token = connectionCredentials?.accessToken?.takeIf { it.isNotBlank() }
-        if (url == null || token == null) {
-            playbackError = "Fehlende Verbindung oder kein Titel ausgewählt"
-            return
-        }
-
-        releasePlayer()
-        playbackError = null
-
-        val player = android.media.MediaPlayer()
-        mediaPlayer = player
-        isPreparing = true
-
-        player.setOnPreparedListener {
-            isPreparing = false
-            durationMs = it.duration.coerceAtLeast(0)
-            val startPositionMs = startPositionSeconds?.coerceAtLeast(0)?.times(1000)
-            if (startPositionMs != null && startPositionMs in 0..durationMs) {
-                it.seekTo(startPositionMs)
-                positionMs = startPositionMs
-            } else {
-                positionMs = 0
-            }
-            it.start()
-            isPlaying = true
-        }
-        player.setOnCompletionListener {
-            isPlaying = false
-            positionMs = durationMs
-        }
-        player.setOnErrorListener { _, _, _ ->
-            playbackError = "Wiedergabe konnte nicht gestartet werden"
-            isPreparing = false
-            isPlaying = false
-            true
-        }
-
-        player.setDataSource(
-            context,
-            android.net.Uri.parse(url),
-            mapOf("Authorization" to "Bearer $token"),
-        )
-        player.prepareAsync()
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            mediaPlayer?.release()
-        }
-    }
-
-    LaunchedEffect(mediaPlayer, isPlaying) {
-        while (mediaPlayer != null && isPlaying) {
-            positionMs = mediaPlayer?.currentPosition?.coerceAtLeast(0) ?: 0
-            kotlinx.coroutines.delay(500)
-        }
-    }
-
-    LaunchedEffect(playbackRequestKey) {
-        if (playbackRequestKey > lastHandledPlaybackRequestKey && itemId != null && connectionCredentials != null) {
-            lastHandledPlaybackRequestKey = playbackRequestKey
-            startPlayback(selectedChapterStartSeconds)
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -473,9 +568,9 @@ private fun PlayerScreen(
             "${formatItemType(activeLibraryItem.itemType)} · Fortschritt ${formatProgress(activeLibraryItem.progressPercent)}",
             style = MaterialTheme.typography.bodyMedium,
         )
-        selectedChapterId?.let {
+        selectedChapterLabel?.let { label ->
             Text(
-                "Kapitel-ID: $it",
+                "Ausgewähltes Kapitel: $label",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -490,37 +585,27 @@ private fun PlayerScreen(
 
         androidx.compose.material3.LinearProgressIndicator(
             progress = {
-                if (durationMs <= 0) 0f else (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+                if (playbackDurationMs <= 0) 0f else (playbackPositionMs.toFloat() / playbackDurationMs.toFloat()).coerceIn(0f, 1f)
             },
             modifier = Modifier.fillMaxWidth(0.8f),
         )
 
         Text(
-            "${formatDuration(positionMs)} / ${formatDuration(durationMs)}",
+            "${formatDuration(playbackPositionMs)} / ${formatDuration(playbackDurationMs)}",
             style = MaterialTheme.typography.labelMedium,
         )
 
         androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { startPlayback() }, enabled = !isPreparing) {
-                Text(if (isPreparing) "Lädt…" else "Play")
+            Button(onClick = onPlay, enabled = !isPreparingPlayback) {
+                Text(if (isPreparingPlayback) "Lädt…" else "Play")
             }
             Button(
-                onClick = {
-                    mediaPlayer?.let {
-                        if (it.isPlaying) {
-                            it.pause()
-                            isPlaying = false
-                        } else {
-                            it.start()
-                            isPlaying = true
-                        }
-                    }
-                },
-                enabled = mediaPlayer != null && !isPreparing,
+                onClick = onPauseResume,
+                enabled = !isPreparingPlayback && playbackDurationMs > 0,
             ) {
-                Text(if (isPlaying) "Pause" else "Resume")
+                Text(if (isPlayingPlayback) "Pause" else "Resume")
             }
-            Button(onClick = { releasePlayer() }, enabled = mediaPlayer != null) {
+            Button(onClick = onStop, enabled = playbackDurationMs > 0 || isPreparingPlayback) {
                 Text("Stop")
             }
         }

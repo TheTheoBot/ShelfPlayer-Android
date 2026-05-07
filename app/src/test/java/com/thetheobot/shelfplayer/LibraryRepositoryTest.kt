@@ -219,5 +219,32 @@ class LibraryRepositoryTest {
         assertEquals("Bitte später erneut versuchen.", itemDetailStateMessage(ItemDetailState.Error(message = "   ")))
         assertEquals("03:20 – 05:00", formatChapterRange(200, 300))
         assertEquals("03:20", formatChapterRange(200, null))
+        assertEquals(
+            "Intro · 00:00 – 02:00",
+            selectedChapterDisplayLabel(
+                chapters = listOf(
+                    LibraryChapter(id = "chapter-1", title = "Intro", startSeconds = 0, endSeconds = 120),
+                    LibraryChapter(id = "chapter-2", title = "Middle", startSeconds = 120, endSeconds = 240),
+                ),
+                selectedChapterId = "chapter-1",
+            ),
+        )
+        assertEquals(
+            "Ausgewähltes Kapitel",
+            selectedChapterDisplayLabel(
+                chapters = emptyList(),
+                selectedChapterId = "chapter-unknown",
+            ),
+        )
+    }
+
+    @Test
+    fun `playback action helpers reflect loading playing paused and idle states`() {
+        assertEquals("Abspielen", playbackActionLabel(null, "item-1", isPreparingPlayback = false, isPlayingPlayback = false))
+        assertEquals("Lädt…", playbackActionLabel("item-1", "item-1", isPreparingPlayback = true, isPlayingPlayback = false))
+        assertEquals("Pause", playbackActionLabel("item-1", "item-1", isPreparingPlayback = false, isPlayingPlayback = true))
+        assertEquals("Resume", playbackActionLabel("item-1", "item-1", isPreparingPlayback = false, isPlayingPlayback = false))
+        assertTrue(playbackActionEnabled(null, "item-1", isPreparingPlayback = false))
+        assertTrue(!playbackActionEnabled("item-1", "item-1", isPreparingPlayback = true))
     }
 }
