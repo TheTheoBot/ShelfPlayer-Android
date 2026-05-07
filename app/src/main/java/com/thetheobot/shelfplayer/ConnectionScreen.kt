@@ -17,9 +17,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -51,6 +52,10 @@ fun validateServerUrl(raw: String): String? {
         return "Server-URL braucht einen Hostnamen"
     }
 
+    if (!uri.userInfo.isNullOrBlank()) {
+        return "Server-URL darf keine Zugangsdaten enthalten"
+    }
+
     if (uri.scheme?.equals("http", ignoreCase = true) == true && !isLocalDevelopmentHost(uri.host)) {
         return "Server-URL muss mit https:// beginnen"
     }
@@ -73,10 +78,13 @@ fun validateAccessToken(raw: String): String? {
 }
 
 @Composable
-fun ConnectionScreen(padding: PaddingValues) {
-    var serverUrl by rememberSaveable { mutableStateOf("") }
-    var accessToken by rememberSaveable { mutableStateOf("") }
-    var savedServerUrl by rememberSaveable { mutableStateOf("") }
+fun ConnectionScreen(
+    padding: PaddingValues,
+    connectionSession: ConnectionSession,
+    onConnectionSaved: (String) -> Unit,
+) {
+    var serverUrl by rememberSaveable(connectionSession.serverUrl) { mutableStateOf(connectionSession.serverUrl) }
+    var accessToken by remember { mutableStateOf("") }
     var connectionSaved by rememberSaveable { mutableStateOf(false) }
     var attemptedSave by rememberSaveable { mutableStateOf(false) }
 
@@ -124,7 +132,7 @@ fun ConnectionScreen(padding: PaddingValues) {
             label = { Text("Access Token") },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+            keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
             ),
             isError = accessTokenError != null,
@@ -140,7 +148,8 @@ fun ConnectionScreen(padding: PaddingValues) {
                 val tokenError = validateAccessToken(accessToken)
 
                 if (urlError == null && tokenError == null) {
-                    savedServerUrl = normalizeServerUrl(serverUrl)
+                    onConnectionSaved(normalizeServerUrl(serverUrl))
+                    accessToken = ""
                     connectionSaved = true
                     attemptedSave = false
                 }
@@ -155,8 +164,8 @@ fun ConnectionScreen(padding: PaddingValues) {
             Card(colors = CardDefaults.elevatedCardColors()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Verbindung vorgemerkt")
-                    Text("Server: $savedServerUrl")
-                    Text("Access Token bleibt nur im Arbeitsspeicher dieses App-Laufs.")
+                    Text("Server: ${connectionSession.serverUrl}")
+                    Text("Access Token wurde nach dem Speichern aus dem Formular gelöscht.")
                 }
             }
         }

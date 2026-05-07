@@ -76,7 +76,31 @@ class ConnectionValidationTest {
     }
 
     @Test
+    fun `validateServerUrl rejects embedded credentials`() {
+        assertEquals(
+            "Server-URL darf keine Zugangsdaten enthalten",
+            validateServerUrl("https://user:pass@books.example.com"),
+        )
+    }
+
+    @Test
     fun `validateAccessToken rejects blanks`() {
         assertEquals("Access Token fehlt", validateAccessToken("   "))
+    }
+
+    @Test
+    fun `connectionSessionStatusText shows empty state when no server is remembered`() {
+        assertEquals(
+            "Noch kein Server gespeichert",
+            connectionSessionStatusText(ConnectionSession()),
+        )
+    }
+
+    @Test
+    fun `connectionSessionStatusText shows remembered server`() {
+        assertEquals(
+            "Gespeicherter Server: https://books.example.com",
+            connectionSessionStatusText(ConnectionSession("https://books.example.com")),
+        )
     }
 }

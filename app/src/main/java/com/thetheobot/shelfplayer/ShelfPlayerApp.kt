@@ -50,12 +50,23 @@ private enum class AppTab(val label: String) {
 @Composable
 fun ShelfPlayerApp() {
     var selectedTab by rememberSaveable { mutableStateOf(AppTab.Library) }
+    var rememberedServerUrl by rememberSaveable { mutableStateOf("") }
+
+    val connectionSession = ConnectionSession(serverUrl = rememberedServerUrl)
 
     MaterialTheme {
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = { Text("ShelfPlayer · ${selectedTab.label}") },
+                    title = {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("ShelfPlayer · ${selectedTab.label}")
+                            Text(
+                                connectionSessionStatusText(connectionSession),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                    },
                 )
             },
             bottomBar = {
@@ -82,8 +93,14 @@ fun ShelfPlayerApp() {
             }
         ) { padding ->
             when (selectedTab) {
-                AppTab.Library -> LibraryScreen(padding)
-                AppTab.Connect -> ConnectionScreen(padding)
+                AppTab.Library -> LibraryScreen(padding, connectionSession)
+                AppTab.Connect -> ConnectionScreen(
+                    padding = padding,
+                    connectionSession = connectionSession,
+                    onConnectionSaved = { savedServerUrl ->
+                        rememberedServerUrl = savedServerUrl
+                    },
+                )
                 AppTab.Player -> PlayerScreen(padding)
             }
         }
@@ -91,7 +108,7 @@ fun ShelfPlayerApp() {
 }
 
 @Composable
-private fun LibraryScreen(padding: PaddingValues) {
+private fun LibraryScreen(padding: PaddingValues, connectionSession: ConnectionSession) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -105,6 +122,25 @@ private fun LibraryScreen(padding: PaddingValues) {
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
             )
+        }
+        item {
+            Card(colors = CardDefaults.elevatedCardColors()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Verbindung", style = MaterialTheme.typography.titleMedium)
+                    Text(connectionSessionStatusText(connectionSession))
+                    if (connectionSession.hasSavedServer) {
+                        Text(
+                            "Die Demo-Bibliothek nutzt aktuell diese vorgemerkte Server-URL.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    } else {
+                        Text(
+                            "Verbinde einen Server, damit wir später echte Inhalte laden können.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
         }
         item {
             Text(
