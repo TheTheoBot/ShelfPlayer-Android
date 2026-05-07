@@ -119,3 +119,20 @@
   - `cd98568` — fix: correct encrypted shared preferences factory order
 - Next step:
   - Update the story issue with the commit hashes and CI link, then continue toward the next MVP slice.
+
+## 2026-05-07T13:10:38Z
+- Story/Issue: #2 — Story: Typed library list scaffold
+- Implemented:
+  - Added typed library domain models and a repository contract for the MVP library slice.
+  - Replaced the hard-coded demo strings with a repository-backed Compose library screen.
+  - Added an in-memory repository slice plus JVM tests for model fields, defensive copying, empty content, and helper formatting.
+- Verification:
+  - `git diff --check` ✅
+  - Independent spec review: PASS
+  - Independent code quality review: APPROVED after addressing defensive-copy and coverage feedback.
+  - `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
+  - `java -version` → `command not found`
+- Commit(s):
+  - `e2943e2` — feat: scaffold typed library list
+- Next step:
+  - Push the branch, let GitHub Actions validate the Android build/tests, and then wire the typed library slice toward live Audiobookshelf data.
