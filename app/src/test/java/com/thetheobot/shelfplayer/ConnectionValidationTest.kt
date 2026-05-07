@@ -1,8 +1,12 @@
 package com.thetheobot.shelfplayer
 
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
+import java.net.HttpURLConnection
 
 class ConnectionValidationTest {
     @Test
@@ -79,13 +83,128 @@ class ConnectionValidationTest {
     fun `validateServerUrl rejects embedded credentials`() {
         assertEquals(
             "Server-URL darf keine Zugangsdaten enthalten",
-            validateServerUrl("https://user:pass@books.example.com"),
+            validateServerUrl("https://user:***@books.example.com"),
         )
     }
 
     @Test
     fun `validateAccessToken rejects blanks`() {
         assertEquals("Access Token fehlt", validateAccessToken("   "))
+    }
+
+    @Test
+    fun `verifyConnection reports failure on non success http status`() = runBlocking {
+        val result = verifyConnection(
+            ConnectionCredentials(
+                serverUrl = "https://books.example.com",
+                accessToken = "token-123",
+            ),
+        ) { url ->
+            object : HttpURLConnection(url) {
+                override fun connect() = Unit
+                override fun disconnect() = Unit
+                override fun usingProxy(): Boolean = false
+                override fun getResponseCode(): Int = 404
+            }
+        }
+
+        assertTrue(result is ConnectionVerificationResult.Failure)
+        assertEquals(
+            "Verbindungstest fehlgeschlagen: HTTP 404",
+            (result as ConnectionVerificationResult.Failure).message,
+        )
+    }
+
+    @Test
+    fun `verifyConnection reports success for a reachable server`() = runBlocking {
+        val result = verifyConnection(
+            ConnectionCredentials(
+                serverUrl = "https://books.example.com",
+                accessToken = " token-123 ",
+            ),
+        ) { url ->
+            object : HttpURLConnection(url) {
+                override fun connect() = Unit
+                override fun disconnect() = Unit
+                override fun usingProxy(): Boolean = false
+                override fun getResponseCode(): Int = 204
+            }
+        }
+
+        assertEquals(ConnectionVerificationResult.Success, result)
+    }
+
+    @Test
+    fun `verifyConnection reports failure when the server cannot be reached`() = runBlocking {
+        val result = verifyConnection(
+            ConnectionCredentials(
+                serverUrl = "https://books.example.com",
+                accessToken = "token-123",
+            ),
+        ) { url ->
+            object : HttpURLConnection(url) {
+                override fun connect() = Unit
+                override fun disconnect() = Unit
+                override fun usingProxy(): Boolean = false
+                override fun getResponseCode(): Int {
+                    throw IOException("boom")
+                }
+            }
+        }
+
+        assertTrue(result is ConnectionVerificationResult.Failure)
+        assertEquals(
+            "Verbindungstest fehlgeschlagen: boom",
+            (result as ConnectionVerificationResult.Failure).message,
+        )
+    }
+
+    @Test
+    fun `encryptedConnectionCredentialsStore saves and loads credentials`() {
+        val store = EncryptedConnectionCredentialsStore(FakeSharedPreferences())
+
+        assertTrue(
+            store.save(
+                ConnectionCredentials(
+                    serverUrl = "https://books.example.com",
+                    accessToken = " token-123 ",
+                ),
+            ),
+        )
+        assertEquals(
+            ConnectionCredentials("https://books.example.com", "token-123"),
+            store.load(),
+        )
+    }
+
+    @Test
+    fun `validateConnectionForm reports both fields as valid`() {
+        val validation = validateConnectionForm(
+            serverUrl = "https://books.example.com",
+            accessToken = "token-123",
+        )
+
+        assertNull(validation.serverUrlError)
+        assertNull(validation.accessTokenError)
+        assertTrue(validation.isValid)
+    }
+
+    @Test
+    fun `validateConnectionForm reports both field errors`() {
+        val validation = validateConnectionForm(
+            serverUrl = "books.example.com",
+            accessToken = "   ",
+        )
+
+        assertEquals("Server-URL muss mit http:// oder https:// beginnen", validation.serverUrlError)
+        assertEquals("Access Token fehlt", validation.accessTokenError)
+        assertTrue(!validation.isValid)
+    }
+
+    @Test
+    fun `hasConnectionInputs trims whitespace before enabling actions`() {
+        assertTrue(!hasConnectionInputs("   ", "token-123"))
+        assertTrue(hasConnectionInputs("https://books.example.com", " token-123 "))
     }
 
     @Test
@@ -100,7 +219,7 @@ class ConnectionValidationTest {
     fun `connectionSessionStatusText shows remembered server`() {
         assertEquals(
             "Gespeicherter Server: https://books.example.com",
-            connectionSessionStatusText(ConnectionSession("https://books.example.com")),
+            connectionSessionStatusText(ConnectionSession(ConnectionCredentials("https://books.example.com", "token-123"))),
         )
     }
 }

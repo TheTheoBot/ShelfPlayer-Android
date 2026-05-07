@@ -3,6 +3,7 @@ package com.thetheobot.shelfplayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,20 +13,41 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.coroutines.launch
 
 private const val CONNECT_HINT = "Beispiel: https://books.example.com"
+
+private enum class ConnectionScreenPhase {
+    Idle,
+    Editing,
+    Validating,
+    ValidationError,
+    Saving,
+    Saved,
+}
+
+data class ConnectionFormValidation(
+    val serverUrlError: String? = null,
+    val accessTokenError: String? = null,
+) {
+    val isValid: Boolean
+        get() = serverUrlError == null && accessTokenError == null
+}
 
 fun normalizeServerUrl(raw: String): String = raw.trim().trimEnd('/')
 
@@ -77,19 +99,61 @@ fun validateAccessToken(raw: String): String? {
     return if (raw.isBlank()) "Access Token fehlt" else null
 }
 
+fun validateConnectionForm(serverUrl: String, accessToken: String): ConnectionFormValidation {
+    return ConnectionFormValidation(
+        serverUrlError = validateServerUrl(serverUrl),
+        accessTokenError = validateAccessToken(accessToken),
+    )
+}
+
+fun hasConnectionInputs(serverUrl: String, accessToken: String): Boolean {
+    return serverUrl.trim().isNotBlank() && accessToken.trim().isNotBlank()
+}
+
 @Composable
 fun ConnectionScreen(
     padding: PaddingValues,
     connectionSession: ConnectionSession,
-    onConnectionSaved: (String) -> Unit,
+    onConnectionSaved: suspend (ConnectionCredentials) -> Boolean,
+    onConnectionTested: suspend (ConnectionCredentials) -> ConnectionVerificationResult = ::verifyConnection,
 ) {
-    var serverUrl by rememberSaveable(connectionSession.serverUrl) { mutableStateOf(connectionSession.serverUrl) }
+    var serverUrl by rememberSaveable { mutableStateOf(connectionSession.serverUrl) }
     var accessToken by remember { mutableStateOf("") }
-    var connectionSaved by rememberSaveable { mutableStateOf(false) }
-    var attemptedSave by rememberSaveable { mutableStateOf(false) }
+    var screenPhase by rememberSaveable { mutableStateOf(ConnectionScreenPhase.Idle) }
+    var bannerMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var bannerIsError by rememberSaveable { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
-    val serverUrlError = if (attemptedSave) validateServerUrl(serverUrl) else null
-    val accessTokenError = if (attemptedSave) validateAccessToken(accessToken) else null
+    LaunchedEffect(connectionSession.serverUrl) {
+        if (serverUrl.isBlank()) {
+            serverUrl = connectionSession.serverUrl
+        }
+    }
+
+    val validation = if (screenPhase == ConnectionScreenPhase.ValidationError || screenPhase == ConnectionScreenPhase.Saving || screenPhase == ConnectionScreenPhase.Validating) {
+        validateConnectionForm(serverUrl, accessToken)
+    } else {
+        ConnectionFormValidation()
+    }
+    val canSubmit = hasConnectionInputs(serverUrl, accessToken) && screenPhase != ConnectionScreenPhase.Validating && screenPhase != ConnectionScreenPhase.Saving
+
+    fun markEditing() {
+        screenPhase = ConnectionScreenPhase.Editing
+        bannerMessage = null
+        bannerIsError = false
+    }
+
+    fun showError(message: String) {
+        screenPhase = ConnectionScreenPhase.ValidationError
+        bannerMessage = message
+        bannerIsError = true
+    }
+
+    fun showSuccess(message: String, phase: ConnectionScreenPhase = ConnectionScreenPhase.Editing) {
+        screenPhase = phase
+        bannerMessage = message
+        bannerIsError = false
+    }
 
     Column(
         modifier = Modifier
@@ -100,25 +164,49 @@ fun ConnectionScreen(
     ) {
         Text("Audiobookshelf verbinden")
         Text(
-            "Gib Server-URL und Access Token ein; die Verbindung wird für diesen App-Lauf vorgemerkt.",
+            "Gib Server-URL und Access Token ein; die App prüft die Eingaben lokal, kann die Verbindung per HTTP testen und speichert die Verbindung verschlüsselt.",
             style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
         )
+
+        if (bannerMessage != null) {
+            Card(
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = if (bannerIsError) {
+                        androidx.compose.material3.MaterialTheme.colorScheme.errorContainer
+                    } else {
+                        androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
+                    },
+                    contentColor = if (bannerIsError) {
+                        androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
+                    } else {
+                        androidx.compose.material3.MaterialTheme.colorScheme.onPrimaryContainer
+                    },
+                ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(if (bannerIsError) "Verbindung konnte nicht geprüft werden" else "Verbindung geprüft")
+                    Text(bannerMessage!!)
+                }
+            }
+        }
 
         OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
             value = serverUrl,
             onValueChange = {
                 serverUrl = it
-                attemptedSave = false
-                connectionSaved = false
+                markEditing()
             },
             label = { Text("Server-URL") },
             placeholder = { Text(CONNECT_HINT) },
             singleLine = true,
-            isError = serverUrlError != null,
+            isError = validation.serverUrlError != null,
         )
-        if (serverUrlError != null) {
-            Text(serverUrlError, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
+        if (validation.serverUrlError != null) {
+            Text(validation.serverUrlError, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
         }
 
         OutlinedTextField(
@@ -126,8 +214,7 @@ fun ConnectionScreen(
             value = accessToken,
             onValueChange = {
                 accessToken = it
-                attemptedSave = false
-                connectionSaved = false
+                markEditing()
             },
             label = { Text("Access Token") },
             singleLine = true,
@@ -135,37 +222,112 @@ fun ConnectionScreen(
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
             ),
-            isError = accessTokenError != null,
+            isError = validation.accessTokenError != null,
         )
-        if (accessTokenError != null) {
-            Text(accessTokenError, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
+        if (validation.accessTokenError != null) {
+            Text(validation.accessTokenError, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
         }
 
-        Button(
-            onClick = {
-                attemptedSave = true
-                val urlError = validateServerUrl(serverUrl)
-                val tokenError = validateAccessToken(accessToken)
-
-                if (urlError == null && tokenError == null) {
-                    onConnectionSaved(normalizeServerUrl(serverUrl))
-                    accessToken = ""
-                    connectionSaved = true
-                    attemptedSave = false
-                }
-            },
-            enabled = serverUrl.isNotBlank() && accessToken.isNotBlank(),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Verbindung speichern")
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        screenPhase = ConnectionScreenPhase.Validating
+                        val currentValidation = validateConnectionForm(serverUrl, accessToken)
+                        if (!currentValidation.isValid) {
+                            showError("Bitte korrigiere die markierten Eingaben.")
+                            return@launch
+                        }
+
+                        val result = runSuspendCatchingPreservingCancellation {
+                            onConnectionTested(
+                                ConnectionCredentials(
+                                    serverUrl = normalizeServerUrl(serverUrl),
+                                    accessToken = accessToken,
+                                ),
+                            )
+                        }.getOrElse { throwable ->
+                            showError("Verbindungstest fehlgeschlagen: ${throwable.message ?: "unbekannter Fehler"}")
+                            return@launch
+                        }
+
+                        when (result) {
+                            ConnectionVerificationResult.Success -> {
+                                showSuccess("Verbindung erfolgreich geprüft")
+                            }
+
+                            is ConnectionVerificationResult.Failure -> {
+                                showError(result.message)
+                            }
+                        }
+                    }
+                },
+                enabled = canSubmit,
+            ) {
+                Text("Verbindung testen")
+            }
+
+            Button(
+                onClick = {
+                    scope.launch {
+                        screenPhase = ConnectionScreenPhase.Saving
+                        val currentValidation = validateConnectionForm(serverUrl, accessToken)
+                        if (!currentValidation.isValid) {
+                            showError("Bitte korrigiere die markierten Eingaben.")
+                            return@launch
+                        }
+
+                        val normalizedServerUrl = normalizeServerUrl(serverUrl)
+                        val success = runSuspendCatchingPreservingCancellation {
+                            onConnectionSaved(
+                                ConnectionCredentials(
+                                    serverUrl = normalizedServerUrl,
+                                    accessToken = accessToken,
+                                )
+                            )
+                        }.getOrElse { throwable ->
+                            showError("Verbindung konnte nicht gespeichert werden: ${throwable.message ?: "unbekannter Fehler"}")
+                            return@launch
+                        }
+                        if (success) {
+                            accessToken = ""
+                            serverUrl = normalizedServerUrl
+                            showSuccess("Verbindung gespeichert", phase = ConnectionScreenPhase.Saved)
+                        } else {
+                            showError("Verbindung konnte nicht gespeichert werden")
+                        }
+                    }
+                },
+                enabled = canSubmit,
+            ) {
+                Text(if (screenPhase == ConnectionScreenPhase.Saving) "Speichere..." else "Speichern & weiter")
+            }
         }
 
-        if (connectionSaved) {
+        if (screenPhase == ConnectionScreenPhase.Validating) {
+            Text("Verbindung wird geprüft…")
+        } else if (screenPhase == ConnectionScreenPhase.Saving) {
+            Text("Verbindung wird gespeichert…")
+        }
+
+        if (screenPhase == ConnectionScreenPhase.Saved) {
             Spacer(modifier = Modifier.height(8.dp))
             Card(colors = CardDefaults.elevatedCardColors()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Verbindung vorgemerkt")
-                    Text("Server: ${connectionSession.serverUrl}")
-                    Text("Access Token wurde nach dem Speichern aus dem Formular gelöscht.")
+                    Text("Verbindung gespeichert")
+                    Text("Server: ${normalizeServerUrl(serverUrl)}")
+                    Text("Server-URL und Token werden verschlüsselt auf dem Gerät gespeichert.")
+                }
+            }
+        } else if (screenPhase == ConnectionScreenPhase.Editing || screenPhase == ConnectionScreenPhase.Idle) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Card(colors = CardDefaults.elevatedCardColors()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Bereit zum Testen")
+                    Text("Die Eingaben sind noch nicht gespeichert.")
                 }
             }
         }

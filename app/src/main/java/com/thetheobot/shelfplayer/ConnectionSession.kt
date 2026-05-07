@@ -1,8 +1,11 @@
 package com.thetheobot.shelfplayer
 
 data class ConnectionSession(
-    val serverUrl: String = "",
+    val savedConnection: ConnectionCredentials? = null,
 ) {
+    val serverUrl: String
+        get() = savedConnection?.serverUrl.orEmpty()
+
     val hasSavedServer: Boolean
         get() = serverUrl.isNotBlank()
 }

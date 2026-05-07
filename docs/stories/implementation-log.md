@@ -47,3 +47,32 @@
   - `88056b0` — fix: restore connection screen compose imports
 - Next step:
   - Update the story issue with the successful run and continue toward actual auth persistence.
+
+## 2026-05-07T09:15:21Z
+- Story/Issue: #1 — Story: Harden connection onboarding URL validation
+- Implemented:
+  - Added encrypted connection credential persistence with AndroidX Security so the server URL and access token survive app restarts without storing them in cleartext.
+  - Loaded saved credentials at app startup and used the remembered server URL to initialize the app shell, top bar, and Library connection status.
+  - Split onboarding into explicit "Verbindung testen" and "Speichern & weiter" actions with a pure form-validation helper and safe success/status text helpers.
+  - Extended JVM coverage for the new validation helper and safe status text behavior.
+- Verification:
+  - `git diff --check` ✅
+  - `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
+- Next step:
+  - Run Android unit tests in CI and continue toward real Audiobookshelf auth/session wiring.
+
+## 2026-05-07T11:07:55Z
+- Story/Issue: #1 — Story: Harden connection onboarding URL validation
+- Implemented:
+  - Added a remote connection test helper and explicit connection screen/app root state phases so the onboarding flow matches the MVP spec more closely.
+  - Moved cleartext allowance into the debug manifest, keeping release manifests stricter while still allowing local development HTTP URLs.
+  - Tightened connection verification and persistence handling with cancellation-safe coroutine wrapping, normalized saved URLs, and broader unit coverage for HTTP status handling.
+  - Added a small coroutine helper for cancellation-preserving `runCatching` usage and updated the implementation log story slice.
+- Verification:
+  - `git diff --check` ✅
+  - Local Gradle build/test unavailable because `java` is not installed in this environment.
+  - Independent spec review: PASS
+  - Independent code quality review: APPROVED
+- Commit(s): pending
+- Next step:
+  - Commit, push, watch GitHub Actions, and update the story issue with the commit hash and CI run link.

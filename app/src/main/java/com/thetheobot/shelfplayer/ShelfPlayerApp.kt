@@ -24,14 +24,19 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val demoItems = listOf(
     "Der Name des Windes",
@@ -46,62 +51,148 @@ private enum class AppTab(val label: String) {
     Player("Player"),
 }
 
+private enum class AppRootState {
+    Loading,
+    FatalError,
+    Ready,
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShelfPlayerApp() {
+    val context = LocalContext.current.applicationContext
+    var connectionStore by remember { mutableStateOf<ConnectionCredentialsStore?>(null) }
+    var connectionStoreReady by remember { mutableStateOf(false) }
+    var connectionInitFailed by remember { mutableStateOf(false) }
     var selectedTab by rememberSaveable { mutableStateOf(AppTab.Library) }
-    var rememberedServerUrl by rememberSaveable { mutableStateOf("") }
+    var rememberedConnection by remember { mutableStateOf<ConnectionCredentials?>(null) }
+    var connectionLoadFailed by remember { mutableStateOf(false) }
 
-    val connectionSession = ConnectionSession(serverUrl = rememberedServerUrl)
+    LaunchedEffect(context) {
+        val initializedStoreResult = runSuspendCatchingPreservingCancellation {
+            withContext(Dispatchers.IO) {
+                EncryptedConnectionCredentialsStore.create(context)
+            }
+        }
+
+        val initializedStore = initializedStoreResult.getOrNull()
+        if (initializedStore == null) {
+            connectionInitFailed = true
+            connectionStoreReady = true
+            return@LaunchedEffect
+        }
+
+        val loadedConnection = runSuspendCatchingPreservingCancellation {
+            withContext(Dispatchers.IO) {
+                initializedStore.load()
+            }
+        }
+        connectionStore = initializedStore
+        connectionLoadFailed = loadedConnection.isFailure
+        rememberedConnection = loadedConnection.getOrNull()
+        connectionStoreReady = true
+    }
+
+    val connectionSession = ConnectionSession(savedConnection = rememberedConnection)
+    val rootState = when {
+        !connectionStoreReady -> AppRootState.Loading
+        connectionInitFailed || connectionStore == null -> AppRootState.FatalError
+        else -> AppRootState.Ready
+    }
 
     MaterialTheme {
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("ShelfPlayer · ${selectedTab.label}")
-                            Text(
-                                connectionSessionStatusText(connectionSession),
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        }
-                    },
-                )
-            },
-            bottomBar = {
-                NavigationBar {
-                    NavigationBarItem(
-                        selected = selectedTab == AppTab.Library,
-                        onClick = { selectedTab = AppTab.Library },
-                        icon = { Icon(Icons.Rounded.Headphones, contentDescription = null) },
-                        label = { Text(AppTab.Library.label) },
-                    )
-                    NavigationBarItem(
-                        selected = selectedTab == AppTab.Connect,
-                        onClick = { selectedTab = AppTab.Connect },
-                        icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                        label = { Text(AppTab.Connect.label) },
-                    )
-                    NavigationBarItem(
-                        selected = selectedTab == AppTab.Player,
-                        onClick = { selectedTab = AppTab.Player },
-                        icon = { Icon(Icons.Rounded.PlayArrow, contentDescription = null) },
-                        label = { Text(AppTab.Player.label) },
-                    )
+        when (rootState) {
+            AppRootState.Loading -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text("ShelfPlayer wird vorbereitet…")
                 }
             }
-        ) { padding ->
-            when (selectedTab) {
-                AppTab.Library -> LibraryScreen(padding, connectionSession)
-                AppTab.Connect -> ConnectionScreen(
-                    padding = padding,
-                    connectionSession = connectionSession,
-                    onConnectionSaved = { savedServerUrl ->
-                        rememberedServerUrl = savedServerUrl
+
+            AppRootState.FatalError -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text("ShelfPlayer konnte den Verbindungsspeicher nicht initialisieren.")
+                }
+            }
+
+            AppRootState.Ready -> {
+                Scaffold(
+                    topBar = {
+                        CenterAlignedTopAppBar(
+                            title = {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("ShelfPlayer · ${selectedTab.label}")
+                                    Text(
+                                        connectionSessionStatusText(connectionSession),
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                    if (connectionLoadFailed) {
+                                        Text(
+                                            "Gespeicherte Verbindung konnte nicht geladen werden",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
+                                }
+                            },
+                        )
                     },
-                )
-                AppTab.Player -> PlayerScreen(padding)
+                    bottomBar = {
+                        NavigationBar {
+                            NavigationBarItem(
+                                selected = selectedTab == AppTab.Library,
+                                onClick = { selectedTab = AppTab.Library },
+                                icon = { Icon(Icons.Rounded.Headphones, contentDescription = null) },
+                                label = { Text(AppTab.Library.label) },
+                            )
+                            NavigationBarItem(
+                                selected = selectedTab == AppTab.Connect,
+                                onClick = { selectedTab = AppTab.Connect },
+                                icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                                label = { Text(AppTab.Connect.label) },
+                            )
+                            NavigationBarItem(
+                                selected = selectedTab == AppTab.Player,
+                                onClick = { selectedTab = AppTab.Player },
+                                icon = { Icon(Icons.Rounded.PlayArrow, contentDescription = null) },
+                                label = { Text(AppTab.Player.label) },
+                            )
+                        }
+                    }
+                ) { padding ->
+                    when (selectedTab) {
+                        AppTab.Library -> LibraryScreen(padding, connectionSession)
+                        AppTab.Connect -> ConnectionScreen(
+                            padding = padding,
+                            connectionSession = connectionSession,
+                            onConnectionSaved = { savedConnection ->
+                                runSuspendCatchingPreservingCancellation {
+                                    withContext(Dispatchers.IO) {
+                                        connectionStore?.save(savedConnection) ?: false
+                                    }
+                                }.getOrDefault(false).also { saved ->
+                                    if (saved) {
+                                        connectionLoadFailed = false
+                                        rememberedConnection = savedConnection
+                                        selectedTab = AppTab.Library
+                                    }
+                                }
+                            },
+                        )
+                        AppTab.Player -> PlayerScreen(padding)
+                    }
+                }
             }
         }
     }
