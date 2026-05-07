@@ -82,9 +82,9 @@ internal class SearchSubmissionTracker {
 
 internal fun SearchState.canClearSearch(): Boolean {
     return when (this) {
-        is SearchState.Typing,
-        is SearchState.Searching,
-        is SearchState.Results,
+        is SearchState.Typing -> normalizedSearchQuery(query).isNotBlank()
+        is SearchState.Searching -> normalizedSearchQuery(query).isNotBlank()
+        is SearchState.Results -> normalizedSearchQuery(query).isNotBlank()
         is SearchState.NoResults -> normalizedSearchQuery(query).isNotBlank()
         is SearchState.Error -> true
         else -> false
