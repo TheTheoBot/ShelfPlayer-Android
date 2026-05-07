@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -21,6 +22,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -255,7 +257,11 @@ fun ShelfPlayerApp() {
                                 }
                             },
                         )
-                        AppTab.Player -> PlayerScreen(padding, selectedLibraryItemId?.let { resolveLibraryItem(it) })
+                        AppTab.Player -> PlayerScreen(
+                            padding = padding,
+                            activeLibraryItem = selectedLibraryItemId?.let { resolveLibraryItem(it) },
+                            connectionCredentials = rememberedConnection,
+                        )
                     }
                 }
             }
@@ -267,16 +273,95 @@ fun ShelfPlayerApp() {
 private fun PlayerScreen(
     padding: PaddingValues,
     activeLibraryItem: LibraryItem?,
+    connectionCredentials: ConnectionCredentials?,
 ) {
+    val context = LocalContext.current
+    var mediaPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
+    var isPreparing by remember { mutableStateOf(false) }
+    var isPlaying by remember { mutableStateOf(false) }
+    var playbackError by remember { mutableStateOf<String?>(null) }
+    var durationMs by remember { mutableStateOf(0) }
+    var positionMs by remember { mutableStateOf(0) }
+
+    val itemId = activeLibraryItem?.id
+    val streamUrl = remember(itemId, connectionCredentials) {
+        val server = connectionCredentials?.serverUrl?.takeIf { it.isNotBlank() } ?: return@remember null
+        val id = itemId ?: return@remember null
+        "${normalizeServerUrl(server)}/api/items/$id/play"
+    }
+
+    fun releasePlayer() {
+        mediaPlayer?.release()
+        mediaPlayer = null
+        isPreparing = false
+        isPlaying = false
+        durationMs = 0
+        positionMs = 0
+    }
+
+    fun startPlayback() {
+        val url = streamUrl
+        val token = connectionCredentials?.accessToken?.takeIf { it.isNotBlank() }
+        if (url == null || token == null) {
+            playbackError = "Fehlende Verbindung oder kein Titel ausgewählt"
+            return
+        }
+
+        releasePlayer()
+        playbackError = null
+
+        val player = android.media.MediaPlayer()
+        mediaPlayer = player
+        isPreparing = true
+
+        player.setOnPreparedListener {
+            isPreparing = false
+            durationMs = it.duration.coerceAtLeast(0)
+            it.start()
+            isPlaying = true
+        }
+        player.setOnCompletionListener {
+            isPlaying = false
+            positionMs = durationMs
+        }
+        player.setOnErrorListener { _, _, _ ->
+            playbackError = "Wiedergabe konnte nicht gestartet werden"
+            isPreparing = false
+            isPlaying = false
+            true
+        }
+
+        player.setDataSource(
+            context,
+            android.net.Uri.parse(url),
+            mapOf("Authorization" to "Bearer $token"),
+        )
+        player.prepareAsync()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            mediaPlayer?.release()
+        }
+    }
+
+    LaunchedEffect(mediaPlayer, isPlaying) {
+        while (mediaPlayer != null && isPlaying) {
+            positionMs = mediaPlayer?.currentPosition?.coerceAtLeast(0) ?: 0
+            kotlinx.coroutines.delay(500)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(padding)
             .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("Now Playing", style = MaterialTheme.typography.labelLarge)
+
         if (activeLibraryItem == null) {
             Text(
                 "Kein Titel ausgewählt",
@@ -284,17 +369,67 @@ private fun PlayerScreen(
                 fontWeight = FontWeight.Bold,
             )
             Text("Wähle einen Eintrag aus der Bibliothek.", style = MaterialTheme.typography.bodyMedium)
-        } else {
-            Text(
-                activeLibraryItem.title,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(activeLibraryItem.author, style = MaterialTheme.typography.bodyMedium)
-            Text(
-                "${formatItemType(activeLibraryItem.itemType)} · Fortschritt ${formatProgress(activeLibraryItem.progressPercent)}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            return@Column
+        }
+
+        Text(
+            activeLibraryItem.title,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(activeLibraryItem.author, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            "${formatItemType(activeLibraryItem.itemType)} · Fortschritt ${formatProgress(activeLibraryItem.progressPercent)}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+
+        androidx.compose.material3.LinearProgressIndicator(
+            progress = {
+                if (durationMs <= 0) 0f else (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+            },
+            modifier = Modifier.fillMaxWidth(0.8f),
+        )
+
+        Text(
+            "${formatDuration(positionMs)} / ${formatDuration(durationMs)}",
+            style = MaterialTheme.typography.labelMedium,
+        )
+
+        androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = { startPlayback() }, enabled = !isPreparing) {
+                Text(if (isPreparing) "Lädt…" else "Play")
+            }
+            Button(
+                onClick = {
+                    mediaPlayer?.let {
+                        if (it.isPlaying) {
+                            it.pause()
+                            isPlaying = false
+                        } else {
+                            it.start()
+                            isPlaying = true
+                        }
+                    }
+                },
+                enabled = mediaPlayer != null && !isPreparing,
+            ) {
+                Text(if (isPlaying) "Pause" else "Resume")
+            }
+            Button(onClick = { releasePlayer() }, enabled = mediaPlayer != null) {
+                Text("Stop")
+            }
+        }
+
+        playbackError?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
     }
+}
+
+private fun formatDuration(milliseconds: Int): String {
+    if (milliseconds <= 0) return "00:00"
+    val totalSeconds = milliseconds / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%02d:%02d".format(minutes, seconds)
 }
