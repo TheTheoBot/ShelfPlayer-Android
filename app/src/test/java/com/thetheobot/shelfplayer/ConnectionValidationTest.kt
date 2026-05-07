@@ -62,11 +62,8 @@ class ConnectionValidationTest {
     }
 
     @Test
-    fun `validateServerUrl rejects uppercase remote http url`() {
-        assertEquals(
-            "Server-URL muss mit https:// beginnen",
-            validateServerUrl("HTTP://books.example.com"),
-        )
+    fun `validateServerUrl accepts uppercase remote http url`() {
+        assertNull(validateServerUrl("HTTP://books.example.com"))
     }
 
     @Test

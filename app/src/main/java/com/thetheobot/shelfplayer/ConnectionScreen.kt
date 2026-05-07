@@ -78,21 +78,7 @@ fun validateServerUrl(raw: String): String? {
         return "Server-URL darf keine Zugangsdaten enthalten"
     }
 
-    if (uri.scheme?.equals("http", ignoreCase = true) == true && !isLocalDevelopmentHost(uri.host)) {
-        return "Server-URL muss mit https:// beginnen"
-    }
-
     return null
-}
-
-private fun isLocalDevelopmentHost(host: String?): Boolean {
-    return when (host?.lowercase()) {
-        "localhost",
-        "127.0.0.1",
-        "::1",
-        "10.0.2.2" -> true
-        else -> false
-    }
 }
 
 fun validateAccessToken(raw: String): String? {
