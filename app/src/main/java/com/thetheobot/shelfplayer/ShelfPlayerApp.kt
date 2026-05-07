@@ -3,21 +3,15 @@ package com.thetheobot.shelfplayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -41,13 +35,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private val demoItems = listOf(
-    "Der Name des Windes",
-    "Project Hail Mary",
-    "Die Verwandlung",
-    "Clean Architecture",
-)
-
 private enum class AppTab(val label: String) {
     Library("Library"),
     Connect("Connect"),
@@ -61,6 +48,7 @@ fun ShelfPlayerApp() {
     var connectionStore by remember { mutableStateOf<ConnectionCredentialsStore?>(null) }
     var connectionStoreReady by remember { mutableStateOf(false) }
     var connectionInitFailed by remember { mutableStateOf(false) }
+    val libraryRepository = remember { InMemoryLibraryRepository() }
     var selectedTab by rememberSaveable { mutableStateOf(AppTab.Library) }
     var rememberedConnection by remember { mutableStateOf<ConnectionCredentials?>(null) }
     var connectionLoadFailed by remember { mutableStateOf(false) }
@@ -220,7 +208,11 @@ fun ShelfPlayerApp() {
                     }
                 ) { padding ->
                     when (selectedTab) {
-                        AppTab.Library -> LibraryScreen(padding, connectionSession)
+                        AppTab.Library -> LibraryScreen(
+                            padding = padding,
+                            connectionSession = connectionSession,
+                            repository = libraryRepository,
+                        )
                         AppTab.Connect -> ConnectionScreen(
                             padding = padding,
                             connectionSession = connectionSession,
@@ -245,65 +237,6 @@ fun ShelfPlayerApp() {
         }
     }
 }
-
-@Composable
-private fun LibraryScreen(padding: PaddingValues, connectionSession: ConnectionSession) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            Text(
-                "Deine Bibliothek",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-        item {
-            Card(colors = CardDefaults.elevatedCardColors()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Verbindung", style = MaterialTheme.typography.titleMedium)
-                    Text(connectionSessionStatusText(connectionSession))
-                    if (connectionSession.hasSavedServer) {
-                        Text(
-                            "Die Demo-Bibliothek nutzt aktuell diese vorgemerkte Server-URL.",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    } else {
-                        Text(
-                            "Verbinde einen Server, damit wir später echte Inhalte laden können.",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                }
-            }
-        }
-        item {
-            Text(
-                "Die Liste bleibt vorerst mit Demo-Inhalten befüllt, bis der Audiobookshelf-Client live ist.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-        items(demoItems) { item ->
-            Card(colors = CardDefaults.elevatedCardColors()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(item, style = MaterialTheme.typography.titleMedium)
-                    Text("47%", style = MaterialTheme.typography.labelLarge)
-                }
-            }
-        }
-    }
-}
-
 @Composable
 private fun PlayerScreen(padding: PaddingValues) {
     Column(
