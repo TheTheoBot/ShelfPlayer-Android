@@ -52,6 +52,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.math.roundToInt
 import java.util.Locale
 
@@ -190,11 +193,64 @@ fun ShelfPlayerApp() {
         return detail.chapters.firstOrNull { it.id == chapterId }?.startSeconds
     }
 
-    fun buildStreamUrl(itemId: String, accessToken: String): String? {
+    fun buildDirectStreamUrl(itemId: String, accessToken: String): String? {
         val server = connectionCredentials?.serverUrl?.takeIf { it.isNotBlank() } ?: return null
         val encodedItemId = encodeUrlPathSegment(itemId)
         val encodedToken = encodeUrlPathSegment(accessToken)
         return "${normalizeServerUrl(server)}/api/items/$encodedItemId/play?token=$encodedToken"
+    }
+
+    fun requestPlaybackStreamUrl(itemId: String, accessToken: String): String? {
+        val server = connectionCredentials?.serverUrl?.takeIf { it.isNotBlank() } ?: return null
+        val normalizedServer = normalizeServerUrl(server)
+        val endpoint = java.net.URL("$normalizedServer/api/items/${encodeUrlPathSegment(itemId)}/play")
+        val body = "{\"deviceInfo\":{\"clientName\":\"ShelfPlayer Android\",\"clientVersion\":\"0.1.0\",\"sdkVersion\":${android.os.Build.VERSION.SDK_INT}},\"supportedMimeTypes\":[\"audio/mpeg\",\"audio/mp4\",\"audio/aac\",\"audio/flac\",\"audio/ogg\",\"audio/webm\"]}"
+
+        return try {
+            val connection = (endpoint.openConnection() as java.net.HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 7_000
+                readTimeout = 12_000
+                doOutput = true
+                setRequestProperty("Accept", "application/json")
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("Authorization", "Bearer $accessToken")
+            }
+
+            val responseBody = try {
+                connection.outputStream.use { output ->
+                    output.write(body.toByteArray(Charsets.UTF_8))
+                }
+
+                val code = connection.responseCode
+                if (code !in 200..299) {
+                    null
+                } else {
+                    connection.inputStream.bufferedReader().use { it.readText() }
+                }
+            } finally {
+                connection.disconnect()
+            }
+
+            val relativeContentUrl = responseBody
+                ?.let { kotlinx.serialization.json.Json.parseToJsonElement(it).jsonObject }
+                ?.get("audioTracks")
+                ?.jsonArray
+                ?.firstOrNull()
+                ?.jsonObject
+                ?.get("contentUrl")
+                ?.jsonPrimitive
+                ?.content
+                ?.takeIf { it.isNotBlank() }
+
+            if (relativeContentUrl != null) {
+                "$normalizedServer${if (relativeContentUrl.startsWith('/')) "" else "/"}$relativeContentUrl?token=${encodeUrlPathSegment(accessToken)}"
+            } else {
+                buildDirectStreamUrl(itemId, accessToken)
+            }
+        } catch (_: Throwable) {
+            buildDirectStreamUrl(itemId, accessToken)
+        }
     }
 
     fun applyPlaybackRate(player: android.media.MediaPlayer, rate: Float) {
@@ -243,7 +299,7 @@ fun ShelfPlayerApp() {
 
     fun startPlayback(itemId: String, startPositionSeconds: Int? = selectedChapterStartSeconds) {
         val token = connectionCredentials?.accessToken?.takeIf { it.isNotBlank() }
-        val streamUrl = token?.let { buildStreamUrl(itemId, it) }
+        val streamUrl = token?.let { requestPlaybackStreamUrl(itemId, it) }
         if (streamUrl == null || token == null) {
             playbackError = "Fehlende Verbindung oder kein Titel ausgewählt"
             return
