@@ -1,7 +1,9 @@
 package com.thetheobot.shelfplayer
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -158,11 +160,18 @@ class LibraryRepositoryTest {
 
     @Test
     fun `in memory repository refresh exposes a refreshing state before restoring the sample feed`() = runBlocking {
-        val repository = InMemoryLibraryRepository()
+        val refreshGate = CompletableDeferred<Unit>()
+        val repository = InMemoryLibraryRepository(refreshPause = { refreshGate.await() })
         val refreshJob = launch { repository.refresh() }
 
-        yield()
+        withTimeout(1_000) {
+            while (repository.libraryFeedState.value !is LibraryFeedState.Refreshing) {
+                yield()
+            }
+        }
+
         assertTrue(repository.libraryFeedState.value is LibraryFeedState.Refreshing)
+        refreshGate.complete(Unit)
 
         refreshJob.join()
         assertTrue(repository.libraryFeedState.value is LibraryFeedState.Loaded)
@@ -170,10 +179,16 @@ class LibraryRepositoryTest {
 
     @Test
     fun `in memory repository refresh recovers from cancellation without getting stuck refreshing`() = runBlocking {
-        val repository = InMemoryLibraryRepository()
+        val refreshGate = CompletableDeferred<Unit>()
+        val repository = InMemoryLibraryRepository(refreshPause = { refreshGate.await() })
         val refreshJob = launch { repository.refresh() }
 
-        yield()
+        withTimeout(1_000) {
+            while (repository.libraryFeedState.value !is LibraryFeedState.Refreshing) {
+                yield()
+            }
+        }
+
         assertTrue(repository.libraryFeedState.value is LibraryFeedState.Refreshing)
 
         refreshJob.cancel()
@@ -246,5 +261,73 @@ class LibraryRepositoryTest {
         assertEquals("Resume", playbackActionLabel("item-1", "item-1", isPreparingPlayback = false, isPlayingPlayback = false))
         assertTrue(playbackActionEnabled(null, "item-1", isPreparingPlayback = false))
         assertTrue(!playbackActionEnabled("item-1", "item-1", isPreparingPlayback = true))
+    }
+
+    @Test
+    fun `player helpers clamp seek positions and format playback rates`() {
+        assertEquals(0f, playbackProgressFraction(0, 0), 0f)
+        assertEquals(0.5f, playbackProgressFraction(50, 100), 0f)
+        assertEquals(1f, playbackProgressFraction(200, 100), 0f)
+        assertEquals(10_000, seekPlaybackPosition(positionMs = 5_000, deltaMs = 5_000, durationMs = 20_000))
+        assertEquals(0, seekPlaybackPosition(positionMs = 5_000, deltaMs = -9_000, durationMs = 20_000))
+        assertEquals(0, seekPlaybackPosition(positionMs = 0, deltaMs = -1_000, durationMs = 0))
+        assertEquals("1.0x", formatPlaybackRate(1f))
+        assertEquals("1.25x", formatPlaybackRate(1.25f))
+    }
+
+    @Test
+    fun `playback progress helper reuses requested chapter or saved progress for the same item`() {
+        val savedProgress = PlaybackProgressSnapshot(
+            itemId = "item-1",
+            positionMs = 123_000,
+            durationMs = 500_000,
+            syncedAtEpochMs = 1L,
+        )
+
+        assertEquals(
+            42,
+            resolvePlaybackStartPositionSeconds(
+                itemId = "item-1",
+                requestedStartPositionSeconds = 42,
+                latestProgress = savedProgress,
+            ),
+        )
+        assertEquals(
+            123,
+            resolvePlaybackStartPositionSeconds(
+                itemId = "item-1",
+                requestedStartPositionSeconds = null,
+                latestProgress = savedProgress,
+            ),
+        )
+        assertEquals(
+            null,
+            resolvePlaybackStartPositionSeconds(
+                itemId = "item-2",
+                requestedStartPositionSeconds = null,
+                latestProgress = savedProgress,
+            ),
+        )
+        assertEquals(
+            null,
+            resolvePlaybackStartPositionSeconds(
+                itemId = "item-1",
+                requestedStartPositionSeconds = null,
+                latestProgress = null,
+            ),
+        )
+    }
+
+    @Test
+    fun `shared preferences playback progress repository stores the latest progress snapshot`() = runBlocking {
+        val repository = SharedPreferencesPlaybackProgressRepository(FakeSharedPreferences())
+
+        repository.syncProgress(itemId = "item-1", positionMs = 12_345, durationMs = 54_321)
+
+        val snapshot = repository.latestProgress.value
+        assertEquals("item-1", snapshot?.itemId)
+        assertEquals(12_345, snapshot?.positionMs)
+        assertEquals(54_321, snapshot?.durationMs)
+        assertTrue((snapshot?.syncedAtEpochMs ?: 0L) > 0L)
     }
 }

@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 class InMemoryLibraryRepository(
     initialItems: List<LibraryItem> = defaultLibraryItems(),
+    private val refreshPause: suspend () -> Unit = { delay(120) },
 ) : LibraryRepository {
     private val seedItems = initialItems.toList()
     private val seedDetailsById = seedItems.associateBy({ it.id }, ::defaultLibraryDetail)
@@ -18,7 +19,7 @@ class InMemoryLibraryRepository(
         val visibleItems = currentState.visibleItems().ifEmpty { seedItems }
         _libraryFeedState.value = LibraryFeedState.Refreshing(visibleItems)
         try {
-            delay(120)
+            refreshPause()
         } finally {
             _libraryFeedState.value = libraryFeedStateOf(visibleItems)
         }

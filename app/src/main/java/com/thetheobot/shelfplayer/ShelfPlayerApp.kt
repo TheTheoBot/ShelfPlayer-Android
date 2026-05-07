@@ -3,12 +3,16 @@ package com.thetheobot.shelfplayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.FastForward
+import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
@@ -16,11 +20,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -28,15 +34,23 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
+import java.util.Locale
 
 private enum class AppTab(val label: String) {
     Library("Library"),
@@ -69,6 +83,31 @@ internal fun playbackActionEnabled(
     return !(isPreparingPlayback && playbackActiveItemId == itemId)
 }
 
+internal fun playbackProgressFraction(positionMs: Int, durationMs: Int): Float {
+    if (durationMs <= 0) return 0f
+    return (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+}
+
+internal fun seekPlaybackPosition(positionMs: Int, deltaMs: Int, durationMs: Int): Int {
+    val boundedDuration = durationMs.coerceAtLeast(0)
+    if (boundedDuration == 0) {
+        return (positionMs + deltaMs).coerceAtLeast(0)
+    }
+
+    return (positionMs + deltaMs).coerceIn(0, boundedDuration)
+}
+
+internal fun formatPlaybackRate(rate: Float): String {
+    return if (rate == rate.toInt().toFloat()) {
+        "${rate.toInt()}.0x"
+    } else {
+        String.format(Locale.US, "%.2fx", rate)
+    }
+}
+
+private val playbackRateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
+private const val playbackSkipSeconds = 15
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShelfPlayerApp() {
@@ -99,6 +138,20 @@ fun ShelfPlayerApp() {
     var playbackError by remember { mutableStateOf<String?>(null) }
     var playbackDurationMs by remember { mutableStateOf(0) }
     var playbackPositionMs by remember { mutableStateOf(0) }
+    var playbackRate by remember { mutableStateOf(1.0f) }
+    val localProgressRepository = remember {
+        SharedPreferencesPlaybackProgressRepository(
+            context.getSharedPreferences("playback_progress", android.content.Context.MODE_PRIVATE),
+        )
+    }
+    val latestPlaybackProgress by localProgressRepository.latestProgress.collectAsState()
+    val progressRepository = remember {
+        AudiobookshelfPlaybackProgressRepository(
+            connectionProvider = { rememberedConnection },
+            localRepository = localProgressRepository,
+        )
+    }
+    val playbackProgressScope = remember { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
 
     fun resolveLibraryItem(itemId: String): LibraryItem? {
         val currentItems = when (val state = libraryFeedState) {
@@ -120,6 +173,10 @@ fun ShelfPlayerApp() {
     }
 
     fun releasePlayback() {
+        val activeItemId = playbackActiveItemId
+        if (activeItemId != null && playbackDurationMs > 0) {
+            syncPlaybackProgressNow()
+        }
         mediaPlayer?.release()
         mediaPlayer = null
         playbackActiveItemId = null
@@ -149,19 +206,26 @@ fun ShelfPlayerApp() {
         player.setOnPreparedListener {
             isPreparingPlayback = false
             playbackDurationMs = it.duration.coerceAtLeast(0)
-            val startPositionMs = startPositionSeconds?.coerceAtLeast(0)?.times(1000)
+            val effectiveStartPositionSeconds = resolvePlaybackStartPositionSeconds(
+                itemId = itemId,
+                requestedStartPositionSeconds = startPositionSeconds,
+                latestProgress = latestPlaybackProgress,
+            )
+            val startPositionMs = effectiveStartPositionSeconds?.coerceAtLeast(0)?.times(1000)
             if (startPositionMs != null && startPositionMs in 0..playbackDurationMs) {
                 it.seekTo(startPositionMs)
                 playbackPositionMs = startPositionMs
             } else {
                 playbackPositionMs = 0
             }
+            it.playbackParams = it.playbackParams.setSpeed(playbackRate)
             it.start()
             isPlayingPlayback = true
         }
         player.setOnCompletionListener {
             isPlayingPlayback = false
             playbackPositionMs = playbackDurationMs
+            syncPlaybackProgressNow()
         }
         player.setOnErrorListener { _, _, _ ->
             releasePlayback()
@@ -179,6 +243,8 @@ fun ShelfPlayerApp() {
 
     fun pausePlayback() {
         mediaPlayer?.takeIf { it.isPlaying }?.pause()
+        playbackPositionMs = mediaPlayer?.currentPosition?.coerceAtLeast(0) ?: playbackPositionMs
+        syncPlaybackProgressNow()
         isPlayingPlayback = false
     }
 
@@ -189,8 +255,45 @@ fun ShelfPlayerApp() {
             player.seekTo(0)
             playbackPositionMs = 0
         }
+        player.playbackParams = player.playbackParams.setSpeed(playbackRate)
         player.start()
         isPlayingPlayback = true
+    }
+
+    fun seekPlayback(positionMs: Int) {
+        val player = mediaPlayer ?: return
+        val targetPositionMs = positionMs.coerceIn(0, playbackDurationMs.takeIf { it > 0 } ?: positionMs)
+        player.seekTo(targetPositionMs)
+        playbackPositionMs = targetPositionMs
+    }
+
+    fun skipPlayback(deltaSeconds: Int) {
+        if (playbackDurationMs <= 0) return
+        seekPlayback(
+            seekPlaybackPosition(
+                positionMs = playbackPositionMs,
+                deltaMs = deltaSeconds * 1000,
+                durationMs = playbackDurationMs,
+            ),
+        )
+    }
+
+    fun changePlaybackRate(rate: Float) {
+        playbackRate = rate
+        mediaPlayer?.playbackParams = mediaPlayer?.playbackParams?.setSpeed(rate)
+    }
+
+    fun syncPlaybackProgressNow() {
+        val itemId = playbackActiveItemId ?: return
+        val durationMs = playbackDurationMs
+        if (durationMs <= 0) return
+        val positionMs = playbackPositionMs.coerceIn(0, durationMs)
+        localProgressRepository.recordProgress(itemId, positionMs, durationMs)
+        playbackProgressScope.launch {
+            withContext(NonCancellable) {
+                progressRepository.syncProgress(itemId, positionMs, durationMs)
+            }
+        }
     }
 
     fun togglePlayback(itemId: String, startPositionSeconds: Int? = selectedChapterStartSeconds) {
@@ -298,9 +401,19 @@ fun ShelfPlayerApp() {
         }
     }
 
+    LaunchedEffect(playbackActiveItemId, isPlayingPlayback, playbackDurationMs) {
+        val itemId = playbackActiveItemId ?: return@LaunchedEffect
+        if (!isPlayingPlayback || playbackDurationMs <= 0) return@LaunchedEffect
+        while (playbackActiveItemId == itemId && isPlayingPlayback) {
+            syncPlaybackProgressNow()
+            delay(30_000)
+        }
+    }
+
     DisposableEffect(Unit) {
         onDispose {
             releasePlayback()
+            playbackProgressScope.cancel()
         }
     }
 
@@ -491,6 +604,10 @@ fun ShelfPlayerApp() {
                         )
                         AppTab.Player -> {
                             val activePlaybackItem = (playbackActiveItemId ?: selectedLibraryItemId)?.let { resolveLibraryItem(it) }
+                            val activePlaybackChapters = (selectedLibraryItemDetailState as? ItemDetailState.Loaded)
+                                ?.detail
+                                ?.chapters
+                                .orEmpty()
                             PlayerScreen(
                                 padding = padding,
                                 activeLibraryItem = activePlaybackItem,
@@ -498,9 +615,11 @@ fun ShelfPlayerApp() {
                                 selectedChapterStartSeconds = selectedChapterStartSeconds,
                                 isPreparingPlayback = isPreparingPlayback,
                                 isPlayingPlayback = isPlayingPlayback,
+                                playbackRate = playbackRate,
                                 playbackError = playbackError,
                                 playbackDurationMs = playbackDurationMs,
                                 playbackPositionMs = playbackPositionMs,
+                                chapterQuickAccess = activePlaybackChapters,
                                 onPlay = {
                                     activePlaybackItem?.id?.let { itemId ->
                                         startPlayback(itemId, selectedChapterStartSeconds)
@@ -512,6 +631,15 @@ fun ShelfPlayerApp() {
                                     } else {
                                         resumePlayback()
                                     }
+                                },
+                                onSeekTo = { seekPlayback(it) },
+                                onSkipBackward = { skipPlayback(-playbackSkipSeconds) },
+                                onSkipForward = { skipPlayback(playbackSkipSeconds) },
+                                onRateChanged = { changePlaybackRate(it) },
+                                onChapterSelected = { chapter ->
+                                    selectedChapterId = chapter.id
+                                    selectedChapterStartSeconds = chapter.startSeconds
+                                    seekPlayback((chapter.startSeconds ?: 0) * 1000)
                                 },
                                 onStop = { releasePlayback() },
                             )
@@ -531,13 +659,36 @@ private fun PlayerScreen(
     selectedChapterStartSeconds: Int?,
     isPreparingPlayback: Boolean,
     isPlayingPlayback: Boolean,
+    playbackRate: Float,
     playbackError: String?,
     playbackDurationMs: Int,
     playbackPositionMs: Int,
+    chapterQuickAccess: List<LibraryChapter>,
     onPlay: () -> Unit,
     onPauseResume: () -> Unit,
+    onSeekTo: (Int) -> Unit,
+    onSkipBackward: () -> Unit,
+    onSkipForward: () -> Unit,
+    onRateChanged: (Float) -> Unit,
+    onChapterSelected: (LibraryChapter) -> Unit,
     onStop: () -> Unit,
 ) {
+    val progressFraction = playbackProgressFraction(playbackPositionMs, playbackDurationMs)
+    var seekFraction by rememberSaveable { mutableStateOf(progressFraction) }
+    var isSeeking by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(progressFraction, isSeeking) {
+        if (!isSeeking) {
+            seekFraction = progressFraction
+        }
+    }
+
+    val displayedPositionMs = if (isSeeking && playbackDurationMs > 0) {
+        (seekFraction * playbackDurationMs).roundToInt()
+    } else {
+        playbackPositionMs
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -583,19 +734,58 @@ private fun PlayerScreen(
             )
         }
 
-        androidx.compose.material3.LinearProgressIndicator(
-            progress = {
-                if (playbackDurationMs <= 0) 0f else (playbackPositionMs.toFloat() / playbackDurationMs.toFloat()).coerceIn(0f, 1f)
-            },
-            modifier = Modifier.fillMaxWidth(0.8f),
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                "${formatDuration(displayedPositionMs)} / ${formatDuration(playbackDurationMs)}",
+                style = MaterialTheme.typography.labelMedium,
+            )
+            Text(
+                "Verbleibend ${formatDuration((playbackDurationMs - displayedPositionMs).coerceAtLeast(0))}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Slider(
+                value = seekFraction,
+                onValueChange = {
+                    isSeeking = true
+                    seekFraction = it
+                },
+                onValueChangeFinished = {
+                    val targetPositionMs = if (playbackDurationMs > 0) {
+                        (seekFraction * playbackDurationMs).roundToInt().coerceIn(0, playbackDurationMs)
+                    } else {
+                        0
+                    }
+                    onSeekTo(targetPositionMs)
+                    isSeeking = false
+                },
+                enabled = playbackDurationMs > 0 && !isPreparingPlayback,
+                modifier = Modifier.fillMaxWidth(0.84f),
+            )
+        }
 
-        Text(
-            "${formatDuration(playbackPositionMs)} / ${formatDuration(playbackDurationMs)}",
-            style = MaterialTheme.typography.labelMedium,
-        )
+        if (chapterQuickAccess.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Kapitel-Quick-Access", style = MaterialTheme.typography.titleSmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    chapterQuickAccess.take(4).forEach { chapter ->
+                        OutlinedButton(
+                            onClick = { onChapterSelected(chapter) },
+                            enabled = !isPreparingPlayback,
+                        ) {
+                            Text(chapter.title)
+                        }
+                    }
+                }
+            }
+        }
 
-        androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = onSkipBackward, enabled = playbackDurationMs > 0 && !isPreparingPlayback) {
+                Icon(Icons.Rounded.FastRewind, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("${playbackSkipSeconds}s")
+            }
             Button(onClick = onPlay, enabled = !isPreparingPlayback) {
                 Text(if (isPreparingPlayback) "Lädt…" else "Play")
             }
@@ -605,8 +795,35 @@ private fun PlayerScreen(
             ) {
                 Text(if (isPlayingPlayback) "Pause" else "Resume")
             }
+            Button(onClick = onSkipForward, enabled = playbackDurationMs > 0 && !isPreparingPlayback) {
+                Text("${playbackSkipSeconds}s")
+                Spacer(modifier = Modifier.width(6.dp))
+                Icon(Icons.Rounded.FastForward, contentDescription = null)
+            }
             Button(onClick = onStop, enabled = playbackDurationMs > 0 || isPreparingPlayback) {
                 Text("Stop")
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Wiedergabegeschwindigkeit", style = MaterialTheme.typography.titleSmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                playbackRateOptions.forEach { rate ->
+                    val selected = rate == playbackRate
+                    val rateButtonLabel = formatPlaybackRate(rate)
+                    if (selected) {
+                        Button(onClick = { onRateChanged(rate) }, enabled = !isPreparingPlayback) {
+                            Text(rateButtonLabel)
+                        }
+                    } else {
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = { onRateChanged(rate) },
+                            enabled = !isPreparingPlayback,
+                        ) {
+                            Text(rateButtonLabel)
+                        }
+                    }
+                }
             }
         }
 
