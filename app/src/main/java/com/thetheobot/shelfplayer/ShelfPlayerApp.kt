@@ -15,6 +15,7 @@ import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -57,6 +58,7 @@ private enum class AppTab(val label: String) {
     Library("Library"),
     Connect("Connect"),
     Player("Player"),
+    Settings("Settings"),
 }
 
 internal fun playbackActionLabel(
@@ -107,7 +109,6 @@ internal fun formatPlaybackRate(rate: Float): String {
 }
 
 private val playbackRateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
-private const val playbackSkipSeconds = 15
 private const val playbackPrepareTimeoutMs = 15_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -123,6 +124,12 @@ fun ShelfPlayerApp() {
             connectionProvider = { rememberedConnection },
         )
     }
+    val appSettingsRepository = remember {
+        SharedPreferencesAppSettingsRepository(
+            context.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE),
+        )
+    }
+    val appSettings by appSettingsRepository.settings.collectAsState()
     val libraryFeedState by libraryRepository.libraryFeedState.collectAsState()
     var selectedTab by rememberSaveable { mutableStateOf(AppTab.Library) }
     var connectionLoadFailed by remember { mutableStateOf(false) }
@@ -140,7 +147,7 @@ fun ShelfPlayerApp() {
     var playbackError by remember { mutableStateOf<String?>(null) }
     var playbackDurationMs by remember { mutableStateOf(0) }
     var playbackPositionMs by remember { mutableStateOf(0) }
-    var playbackRate by remember { mutableStateOf(1.0f) }
+    var playbackRate by rememberSaveable { mutableStateOf(appSettings.defaultPlaybackRate) }
     var playbackPrepareWatchdogToken by remember { mutableStateOf(0) }
     val playbackProgressNamespace = rememberedConnection
         ?.serverUrl
@@ -160,6 +167,12 @@ fun ShelfPlayerApp() {
         )
     }
     val playbackProgressScope = remember { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
+
+    LaunchedEffect(appSettings.defaultPlaybackRate, playbackActiveItemId, isPlayingPlayback, isPreparingPlayback) {
+        if (playbackActiveItemId == null && !isPlayingPlayback && !isPreparingPlayback) {
+            playbackRate = appSettings.defaultPlaybackRate
+        }
+    }
 
     fun resolveLibraryItem(itemId: String): LibraryItem? {
         val currentItems = when (val state = libraryFeedState) {
@@ -234,6 +247,7 @@ fun ShelfPlayerApp() {
 
         releasePlayback()
         playbackError = null
+        playbackRate = appSettings.defaultPlaybackRate
 
         val watchdogToken = playbackPrepareWatchdogToken + 1
         playbackPrepareWatchdogToken = watchdogToken
@@ -573,7 +587,7 @@ fun ShelfPlayerApp() {
                             NavigationBarItem(
                                 selected = selectedTab == AppTab.Connect,
                                 onClick = { selectedTab = AppTab.Connect },
-                                icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                                icon = { Icon(Icons.Rounded.Link, contentDescription = null) },
                                 label = { Text(AppTab.Connect.label) },
                             )
                             NavigationBarItem(
@@ -581,6 +595,12 @@ fun ShelfPlayerApp() {
                                 onClick = { selectedTab = AppTab.Player },
                                 icon = { Icon(Icons.Rounded.PlayArrow, contentDescription = null) },
                                 label = { Text(AppTab.Player.label) },
+                            )
+                            NavigationBarItem(
+                                selected = selectedTab == AppTab.Settings,
+                                onClick = { selectedTab = AppTab.Settings },
+                                icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                                label = { Text(AppTab.Settings.label) },
                             )
                         }
                     }
@@ -673,6 +693,7 @@ fun ShelfPlayerApp() {
                                 isPreparingPlayback = isPreparingPlayback,
                                 isPlayingPlayback = isPlayingPlayback,
                                 playbackRate = playbackRate,
+                                skipIntervalSeconds = appSettings.playbackSkipIntervalSeconds,
                                 playbackError = playbackError,
                                 playbackDurationMs = playbackDurationMs,
                                 playbackPositionMs = playbackPositionMs,
@@ -690,8 +711,8 @@ fun ShelfPlayerApp() {
                                     }
                                 },
                                 onSeekTo = { seekPlayback(it) },
-                                onSkipBackward = { skipPlayback(-playbackSkipSeconds) },
-                                onSkipForward = { skipPlayback(playbackSkipSeconds) },
+                                onSkipBackward = { skipPlayback(-appSettings.playbackSkipIntervalSeconds) },
+                                onSkipForward = { skipPlayback(appSettings.playbackSkipIntervalSeconds) },
                                 onRateChanged = { changePlaybackRate(it) },
                                 onChapterSelected = { chapter ->
                                     selectedChapterId = chapter.id
@@ -701,6 +722,10 @@ fun ShelfPlayerApp() {
                                 onStop = { releasePlayback() },
                             )
                         }
+                        AppTab.Settings -> SettingsScreen(
+                            padding = padding,
+                            appSettingsRepository = appSettingsRepository,
+                        )
                     }
                 }
             }
@@ -717,6 +742,7 @@ private fun PlayerScreen(
     isPreparingPlayback: Boolean,
     isPlayingPlayback: Boolean,
     playbackRate: Float,
+    skipIntervalSeconds: Int,
     playbackError: String?,
     playbackDurationMs: Int,
     playbackPositionMs: Int,
@@ -841,7 +867,7 @@ private fun PlayerScreen(
             Button(onClick = onSkipBackward, enabled = playbackDurationMs > 0 && !isPreparingPlayback) {
                 Icon(Icons.Rounded.FastRewind, contentDescription = null)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("${playbackSkipSeconds}s")
+                Text("${skipIntervalSeconds}s")
             }
             Button(onClick = onPlay, enabled = !isPreparingPlayback) {
                 Text(if (isPreparingPlayback) "Lädt…" else "Play")
@@ -853,7 +879,7 @@ private fun PlayerScreen(
                 Text(if (isPlayingPlayback) "Pause" else "Resume")
             }
             Button(onClick = onSkipForward, enabled = playbackDurationMs > 0 && !isPreparingPlayback) {
-                Text("${playbackSkipSeconds}s")
+                Text("${skipIntervalSeconds}s")
                 Spacer(modifier = Modifier.width(6.dp))
                 Icon(Icons.Rounded.FastForward, contentDescription = null)
             }
