@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -171,7 +170,7 @@ private fun DetailHeader(item: LibraryItem) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (!item.coverUrl.isNullOrBlank()) {
+            if (item.coverUrl?.isNotBlank() == true) {
                 SubcomposeAsyncImage(
                     model = item.coverUrl,
                     contentDescription = "${item.title} Cover",
@@ -187,7 +186,7 @@ private fun DetailHeader(item: LibraryItem) {
             }
 
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(item.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
