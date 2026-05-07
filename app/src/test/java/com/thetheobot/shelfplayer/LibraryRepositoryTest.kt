@@ -293,11 +293,32 @@ class LibraryRepositoryTest {
             ),
         )
         assertEquals(
+            0,
+            resolvePlaybackStartPositionSeconds(
+                itemId = "item-1",
+                requestedStartPositionSeconds = -9,
+                latestProgress = savedProgress,
+            ),
+        )
+        assertEquals(
             123,
             resolvePlaybackStartPositionSeconds(
                 itemId = "item-1",
                 requestedStartPositionSeconds = null,
                 latestProgress = savedProgress,
+            ),
+        )
+        assertEquals(
+            null,
+            resolvePlaybackStartPositionSeconds(
+                itemId = "item-1",
+                requestedStartPositionSeconds = null,
+                latestProgress = PlaybackProgressSnapshot(
+                    itemId = "item-1",
+                    positionMs = 500_000,
+                    durationMs = 500_000,
+                    syncedAtEpochMs = 2L,
+                ),
             ),
         )
         assertEquals(

@@ -84,6 +84,45 @@ class PlaybackProgressRepositoryTest {
         assertEquals("item-1", repository.latestProgress.value?.itemId)
     }
 
+    @Test
+    fun `shared preferences playback progress repository restores persisted snapshot across a fresh instance`() {
+        val sharedPreferences = FakeSharedPreferences()
+
+        val firstRepository = SharedPreferencesPlaybackProgressRepository(
+            sharedPreferences = sharedPreferences,
+            namespace = "https://books.example.com",
+        )
+        firstRepository.recordProgress(itemId = "item-1", positionMs = 12_345, durationMs = 54_321)
+
+        val secondRepository = SharedPreferencesPlaybackProgressRepository(
+            sharedPreferences = sharedPreferences,
+            namespace = "https://books.example.com",
+        )
+
+        val snapshot = secondRepository.latestProgress.value
+        assertEquals("item-1", snapshot?.itemId)
+        assertEquals(12_345, snapshot?.positionMs)
+        assertEquals(54_321, snapshot?.durationMs)
+        assertTrue((snapshot?.syncedAtEpochMs ?: 0L) > 0L)
+    }
+
+    @Test
+    fun `shared preferences playback progress repository namespaces snapshots by server`() {
+        val sharedPreferences = FakeSharedPreferences()
+
+        SharedPreferencesPlaybackProgressRepository(
+            sharedPreferences = sharedPreferences,
+            namespace = "https://books-one.example.com",
+        ).recordProgress(itemId = "item-1", positionMs = 1_000, durationMs = 2_000)
+
+        val otherNamespaceRepository = SharedPreferencesPlaybackProgressRepository(
+            sharedPreferences = sharedPreferences,
+            namespace = "https://books-two.example.com",
+        )
+
+        assertEquals(null, otherNamespaceRepository.latestProgress.value)
+    }
+
     private class RecordingHttpURLConnection(
         url: URL,
         private val responseCode: Int,

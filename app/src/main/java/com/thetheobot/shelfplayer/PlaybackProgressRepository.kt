@@ -32,11 +32,16 @@ internal fun resolvePlaybackStartPositionSeconds(
         return null
     }
 
+    if (savedProgress.durationMs > 0 && savedProgress.positionMs >= savedProgress.durationMs) {
+        return null
+    }
+
     return savedProgress.positionMs / 1000
 }
 
 class SharedPreferencesPlaybackProgressRepository(
     private val sharedPreferences: SharedPreferences,
+    private val namespace: String? = null,
 ) : PlaybackProgressRepository {
     private val _latestProgress = MutableStateFlow(readSnapshot())
     override val latestProgress: StateFlow<PlaybackProgressSnapshot?> = _latestProgress
@@ -49,10 +54,10 @@ class SharedPreferencesPlaybackProgressRepository(
             syncedAtEpochMs = System.currentTimeMillis(),
         )
         sharedPreferences.edit()
-            .putString(KEY_ITEM_ID, snapshot.itemId)
-            .putInt(KEY_POSITION_MS, snapshot.positionMs)
-            .putInt(KEY_DURATION_MS, snapshot.durationMs)
-            .putLong(KEY_SYNCED_AT_EPOCH_MS, snapshot.syncedAtEpochMs)
+            .putString(key(KEY_ITEM_ID), snapshot.itemId)
+            .putInt(key(KEY_POSITION_MS), snapshot.positionMs)
+            .putInt(key(KEY_DURATION_MS), snapshot.durationMs)
+            .putLong(key(KEY_SYNCED_AT_EPOCH_MS), snapshot.syncedAtEpochMs)
             .apply()
         _latestProgress.value = snapshot
     }
@@ -62,18 +67,22 @@ class SharedPreferencesPlaybackProgressRepository(
     }
 
     private fun readSnapshot(): PlaybackProgressSnapshot? {
-        val itemId = sharedPreferences.getString(KEY_ITEM_ID, null).orEmpty()
+        val itemId = sharedPreferences.getString(key(KEY_ITEM_ID), null).orEmpty()
         if (itemId.isBlank()) return null
 
-        val positionMs = sharedPreferences.getInt(KEY_POSITION_MS, 0)
-        val durationMs = sharedPreferences.getInt(KEY_DURATION_MS, 0)
-        val syncedAtEpochMs = sharedPreferences.getLong(KEY_SYNCED_AT_EPOCH_MS, 0L)
+        val positionMs = sharedPreferences.getInt(key(KEY_POSITION_MS), 0)
+        val durationMs = sharedPreferences.getInt(key(KEY_DURATION_MS), 0)
+        val syncedAtEpochMs = sharedPreferences.getLong(key(KEY_SYNCED_AT_EPOCH_MS), 0L)
         return PlaybackProgressSnapshot(
             itemId = itemId,
             positionMs = positionMs,
             durationMs = durationMs,
             syncedAtEpochMs = syncedAtEpochMs,
         )
+    }
+
+    private fun key(baseKey: String): String {
+        return namespace?.takeIf { it.isNotBlank() }?.let { "$it::$baseKey" } ?: baseKey
     }
 
     private companion object {
