@@ -170,3 +170,20 @@
 - Commit(s): pending
 - Next step:
   - Commit, push, create/update the story issue, and post the GitHub Actions run link once CI finishes.
+
+## 2026-05-07T16:59:19Z
+- Story/Issue: #3 — Story: Item detail + chapter list basis
+- Implemented:
+  - Added selectable chapter highlighting in the item-detail list and a human-readable chapter label in the player.
+  - Hoisted playback state so item detail can toggle Play/Pause and keep the active playback item stable in the player tab.
+  - Preserved chapter context across item-detail playback flows and cleared stale chapter state when opening a different item.
+  - Added helper coverage for chapter labels and playback action labels/enabled states.
+- Verification:
+  - `git diff --check` ✅
+  - Independent spec review: PASS
+  - Independent code quality review: APPROVED
+  - Local Gradle execution is still blocked here because `java` is not installed.
+- Commit(s):
+  - `db55804` — feat: refine item detail playback flow
+- Next step:
+  - Push to GitHub, monitor the GitHub Actions run, and update Issue #3 with the commit hash and CI link.
