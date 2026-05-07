@@ -40,7 +40,7 @@ class ConnectionValidationTest {
     fun `validateServerUrl rejects malformed url`() {
         assertEquals(
             "Server-URL ist ungültig",
-            validateServerUrl("https://books.example.com:bad"),
+            validateServerUrl("https://books.example.com/invalid path"),
         )
     }
 
