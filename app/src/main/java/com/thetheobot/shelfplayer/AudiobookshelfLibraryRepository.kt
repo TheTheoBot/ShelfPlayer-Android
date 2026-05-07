@@ -170,9 +170,9 @@ private fun resolveItemType(mediaType: String): LibraryItemType {
 }
 
 private fun JsonObject.stringValue(key: String): String {
-    return (this[key] as? JsonPrimitive)?.content.orEmpty()
+    return this[key]?.jsonPrimitive?.content.orEmpty()
 }
 
 private fun JsonObject.doubleValue(key: String): Double? {
-    return (this[key] as? JsonPrimitive)?.doubleOrNull
+    return this[key]?.jsonPrimitive?.doubleOrNull
 }
