@@ -1,14 +1,27 @@
 package com.thetheobot.shelfplayer
 
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class InMemoryLibraryRepository(
     initialItems: List<LibraryItem> = defaultLibraryItems(),
 ) : LibraryRepository {
-    private val _libraryItems = MutableStateFlow(initialItems.toList())
+    private val seedItems = initialItems.toList()
+    private val _libraryFeedState = MutableStateFlow<LibraryFeedState>(LibraryFeedState.Loading)
 
-    override val libraryItems: StateFlow<List<LibraryItem>> = _libraryItems
+    override val libraryFeedState: StateFlow<LibraryFeedState> = _libraryFeedState
+
+    override suspend fun refresh() {
+        val currentState = _libraryFeedState.value
+        val visibleItems = currentState.visibleItems().ifEmpty { seedItems }
+        _libraryFeedState.value = LibraryFeedState.Refreshing(visibleItems)
+        try {
+            delay(120)
+        } finally {
+            _libraryFeedState.value = libraryFeedStateOf(visibleItems)
+        }
+    }
 }
 
 private fun defaultLibraryItems(): List<LibraryItem> {
@@ -19,6 +32,7 @@ private fun defaultLibraryItems(): List<LibraryItem> {
             author = "Patrick Rothfuss",
             progressPercent = 47,
             itemType = LibraryItemType.Audiobook,
+            coverUrl = "https://picsum.photos/seed/der-name-des-windes/240/240",
         ),
         LibraryItem(
             id = "project-hail-mary",
@@ -26,6 +40,7 @@ private fun defaultLibraryItems(): List<LibraryItem> {
             author = "Andy Weir",
             progressPercent = 82,
             itemType = LibraryItemType.Audiobook,
+            coverUrl = "https://picsum.photos/seed/project-hail-mary/240/240",
         ),
         LibraryItem(
             id = "die-verwandlung",
@@ -33,6 +48,7 @@ private fun defaultLibraryItems(): List<LibraryItem> {
             author = "Franz Kafka",
             progressPercent = 0,
             itemType = LibraryItemType.Book,
+            coverUrl = "https://picsum.photos/seed/die-verwandlung/240/240",
         ),
         LibraryItem(
             id = "clean-architecture",
@@ -40,6 +56,7 @@ private fun defaultLibraryItems(): List<LibraryItem> {
             author = "Robert C. Martin",
             progressPercent = 23,
             itemType = LibraryItemType.Book,
+            coverUrl = "https://picsum.photos/seed/clean-architecture/240/240",
         ),
     )
 }

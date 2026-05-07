@@ -136,3 +136,21 @@
   - `e2943e2` — feat: scaffold typed library list
 - Next step:
   - Push the branch, let GitHub Actions validate the Android build/tests, and then wire the typed library slice toward live Audiobookshelf data.
+
+## 2026-05-07T14:17:55Z
+- Story/Issue: #2 — Story: Typed library list scaffold
+- Implemented:
+  - Introduced a typed `LibraryFeedState` model with Loading, Loaded, Empty, Error, and Refreshing states plus helper copy functions.
+  - Upgraded the in-memory library repository to start in Loading, emit Refreshing during pull-to-refresh, and restore state safely after cancellation.
+  - Wired the library screen to explicit appear/refresh/item-click/play callbacks, added pull-to-refresh, retry handling, cover thumbnails, and item-level Details/Play actions.
+  - Routed library item/play actions in the app shell to the player tab and selected item so the controls are no longer dead ends.
+  - Expanded JVM coverage for loading, refresh transitions, cancellation recovery, helper formatting, and defensive copying.
+- Verification:
+  - `git diff --check` ✅
+  - Independent spec review: PASS
+  - Independent code quality review: APPROVED
+  - Local Android Gradle execution is still blocked because `java` is not installed in this environment.
+- Commit(s):
+  - pending
+- Next step:
+  - Commit and push this library slice, then let GitHub Actions confirm the Android build/tests and update the story issue with the new run link.

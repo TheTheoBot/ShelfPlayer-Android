@@ -22,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,10 +50,21 @@ fun ShelfPlayerApp() {
     var connectionStoreReady by remember { mutableStateOf(false) }
     var connectionInitFailed by remember { mutableStateOf(false) }
     val libraryRepository = remember { InMemoryLibraryRepository() }
+    val libraryFeedState by libraryRepository.libraryFeedState.collectAsState()
     var selectedTab by rememberSaveable { mutableStateOf(AppTab.Library) }
     var rememberedConnection by remember { mutableStateOf<ConnectionCredentials?>(null) }
     var connectionLoadFailed by remember { mutableStateOf(false) }
     var initializationAttempt by rememberSaveable { mutableStateOf(0) }
+    var selectedLibraryItemId by rememberSaveable { mutableStateOf<String?>(null) }
+
+    fun resolveLibraryItem(itemId: String): LibraryItem? {
+        val currentItems = when (val state = libraryFeedState) {
+            is LibraryFeedState.Loaded -> state.items
+            is LibraryFeedState.Refreshing -> state.items
+            else -> emptyList()
+        }
+        return currentItems.firstOrNull { it.id == itemId }
+    }
 
     LaunchedEffect(context, initializationAttempt) {
         val initializedStoreResult = runSuspendCatchingPreservingCancellation {
@@ -210,8 +222,17 @@ fun ShelfPlayerApp() {
                     when (selectedTab) {
                         AppTab.Library -> LibraryScreen(
                             padding = padding,
-                            connectionSession = connectionSession,
                             repository = libraryRepository,
+                            onAppear = { libraryRepository.refresh() },
+                            onRefresh = { libraryRepository.refresh() },
+                            onItemClick = { itemId ->
+                                selectedLibraryItemId = itemId
+                                selectedTab = AppTab.Player
+                            },
+                            onPlayClick = { itemId ->
+                                selectedLibraryItemId = itemId
+                                selectedTab = AppTab.Player
+                            },
                         )
                         AppTab.Connect -> ConnectionScreen(
                             padding = padding,
@@ -230,15 +251,19 @@ fun ShelfPlayerApp() {
                                 }
                             },
                         )
-                        AppTab.Player -> PlayerScreen(padding)
+                        AppTab.Player -> PlayerScreen(padding, selectedLibraryItemId?.let { resolveLibraryItem(it) })
                     }
                 }
             }
         }
     }
 }
+
 @Composable
-private fun PlayerScreen(padding: PaddingValues) {
+private fun PlayerScreen(
+    padding: PaddingValues,
+    activeLibraryItem: LibraryItem?,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -248,11 +273,24 @@ private fun PlayerScreen(padding: PaddingValues) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("Now Playing", style = MaterialTheme.typography.labelLarge)
-        Text(
-            "Project Hail Mary",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        Text("Kapitel 12 · 03:41:52 verbleibend", style = MaterialTheme.typography.bodyMedium)
+        if (activeLibraryItem == null) {
+            Text(
+                "Project Hail Mary",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text("Kapitel 12 · 03:41:52 verbleibend", style = MaterialTheme.typography.bodyMedium)
+        } else {
+            Text(
+                activeLibraryItem.title,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(activeLibraryItem.author, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "${formatItemType(activeLibraryItem.itemType)} · Fortschritt ${formatProgress(activeLibraryItem.progressPercent)}",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
     }
 }
