@@ -32,10 +32,18 @@ fun validateServerUrl(raw: String): String? {
     val trimmed = raw.trim()
     if (trimmed.isBlank()) return "Server-URL fehlt"
 
+    val schemeSeparatorIndex = trimmed.indexOf("://")
+    if (schemeSeparatorIndex >= 0) {
+        val authorityRemainder = trimmed.substring(schemeSeparatorIndex + 3)
+        if (authorityRemainder.isBlank() || authorityRemainder.all { it == '/' }) {
+            return "Server-URL braucht einen Hostnamen"
+        }
+    }
+
     val uri = runCatching { java.net.URI(trimmed) }.getOrNull()
         ?: return "Server-URL ist ungültig"
 
-    if (!uri.scheme.equals("http", ignoreCase = true) && !uri.scheme.equals("https", ignoreCase = true)) {
+    if (!(uri.scheme?.equals("http", ignoreCase = true) == true || uri.scheme?.equals("https", ignoreCase = true) == true)) {
         return "Server-URL muss mit http:// oder https:// beginnen"
     }
 
@@ -43,7 +51,7 @@ fun validateServerUrl(raw: String): String? {
         return "Server-URL braucht einen Hostnamen"
     }
 
-    if (uri.scheme.equals("http", ignoreCase = true) && !isLocalDevelopmentHost(uri.host)) {
+    if (uri.scheme?.equals("http", ignoreCase = true) == true && !isLocalDevelopmentHost(uri.host)) {
         return "Server-URL muss mit https:// beginnen"
     }
 

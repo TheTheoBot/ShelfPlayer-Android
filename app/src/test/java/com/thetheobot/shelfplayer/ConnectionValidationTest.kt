@@ -37,6 +37,22 @@ class ConnectionValidationTest {
     }
 
     @Test
+    fun `validateServerUrl rejects malformed url`() {
+        assertEquals(
+            "Server-URL ist ungültig",
+            validateServerUrl("https://books.example.com:bad"),
+        )
+    }
+
+    @Test
+    fun `validateServerUrl rejects missing scheme`() {
+        assertEquals(
+            "Server-URL muss mit http:// oder https:// beginnen",
+            validateServerUrl("books.example.com"),
+        )
+    }
+
+    @Test
     fun `validateServerUrl accepts uppercase https scheme`() {
         assertNull(validateServerUrl("HTTPS://books.example.com"))
     }
