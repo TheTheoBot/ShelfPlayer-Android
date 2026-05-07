@@ -108,6 +108,7 @@ internal fun formatPlaybackRate(rate: Float): String {
 
 private val playbackRateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
 private const val playbackSkipSeconds = 15
+private const val playbackPrepareTimeoutMs = 15_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -140,6 +141,7 @@ fun ShelfPlayerApp() {
     var playbackDurationMs by remember { mutableStateOf(0) }
     var playbackPositionMs by remember { mutableStateOf(0) }
     var playbackRate by remember { mutableStateOf(1.0f) }
+    var playbackPrepareWatchdogToken by remember { mutableStateOf(0) }
     val playbackProgressNamespace = rememberedConnection
         ?.serverUrl
         ?.takeIf { it.isNotBlank() }
@@ -175,7 +177,7 @@ fun ShelfPlayerApp() {
 
     fun buildStreamUrl(itemId: String): String? {
         val server = connectionCredentials?.serverUrl?.takeIf { it.isNotBlank() } ?: return null
-        return "${normalizeServerUrl(server)}/api/items/${android.net.Uri.encode(itemId)}/play"
+        return "${normalizeServerUrl(server)}/api/items/${encodeUrlPathSegment(itemId)}/play"
     }
 
     fun applyPlaybackRate(player: android.media.MediaPlayer, rate: Float) {
@@ -203,6 +205,7 @@ fun ShelfPlayerApp() {
     }
 
     fun clearPlaybackStateWithoutSync() {
+        playbackPrepareWatchdogToken += 1
         mediaPlayer?.release()
         mediaPlayer = null
         playbackActiveItemId = null
@@ -232,12 +235,16 @@ fun ShelfPlayerApp() {
         releasePlayback()
         playbackError = null
 
+        val watchdogToken = playbackPrepareWatchdogToken + 1
+        playbackPrepareWatchdogToken = watchdogToken
+
         val player = android.media.MediaPlayer()
         mediaPlayer = player
         playbackActiveItemId = itemId
         isPreparingPlayback = true
 
         player.setOnPreparedListener {
+            playbackPrepareWatchdogToken += 1
             isPreparingPlayback = false
             playbackDurationMs = it.duration.coerceAtLeast(0)
             val effectiveStartPositionSeconds = resolvePlaybackStartPositionSeconds(
@@ -262,6 +269,7 @@ fun ShelfPlayerApp() {
             syncPlaybackProgressNow()
         }
         player.setOnErrorListener { _, _, _ ->
+            playbackPrepareWatchdogToken += 1
             releasePlayback()
             playbackError = "Wiedergabe konnte nicht gestartet werden"
             true
@@ -275,6 +283,7 @@ fun ShelfPlayerApp() {
             )
             player.prepareAsync()
         } catch (throwable: Throwable) {
+            playbackPrepareWatchdogToken += 1
             clearPlaybackStateWithoutSync()
             playbackError = throwable.message?.takeIf { it.isNotBlank() }
                 ?: "Wiedergabe konnte nicht gestartet werden"
@@ -426,6 +435,22 @@ fun ShelfPlayerApp() {
             },
         )
     }
+
+    LaunchedEffect(playbackPrepareWatchdogToken, isPreparingPlayback, playbackActiveItemId) {
+        val itemId = playbackActiveItemId ?: return@LaunchedEffect
+        if (!isPreparingPlayback) return@LaunchedEffect
+        val tokenAtStart = playbackPrepareWatchdogToken
+        delay(playbackPrepareTimeoutMs)
+        if (
+            isPreparingPlayback &&
+            playbackActiveItemId == itemId &&
+            playbackPrepareWatchdogToken == tokenAtStart
+        ) {
+            releasePlayback()
+            playbackError = "Wiedergabe-Start timeout nach 15s. Bitte Verbindung/Server prüfen."
+        }
+    }
+
     LaunchedEffect(mediaPlayer, isPlayingPlayback) {
         while (mediaPlayer != null && isPlayingPlayback) {
             playbackPositionMs = mediaPlayer?.currentPosition?.coerceAtLeast(0) ?: 0

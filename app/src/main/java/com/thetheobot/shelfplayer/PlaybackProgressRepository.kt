@@ -121,7 +121,7 @@ class AudiobookshelfPlaybackProgressRepository(
                 append('}')
             }
 
-            val endpoint = URL("$normalizedServerUrl/api/me/progress/${android.net.Uri.encode(itemId)}")
+            val endpoint = URL("$normalizedServerUrl/api/me/progress/${encodeUrlPathSegment(itemId)}")
             if (!executeProgressUpdate(endpoint, token, requestBody, "POST")) {
                 executeProgressUpdate(endpoint, token, requestBody, "PUT")
             }
