@@ -45,4 +45,46 @@ class AudiobookshelfLibraryRepositoryTest {
         assertEquals(LibraryItemType.Podcast, result[1].itemType)
         assertEquals("http://abs.local/api/items/item-2/cover", result[1].coverUrl)
     }
+
+    @Test
+    fun `parseLibraryItemDetail maps item payload to detail model with chapters`() {
+        val payload = """
+            {
+              "id": "item-1",
+              "title": "The Pragmatic Programmer",
+              "mediaType": "book",
+              "authorName": "Andrew Hunt",
+              "description": "A classic software engineering book.",
+              "progress": 0.42,
+              "coverPath": "/api/items/item-1/cover",
+              "chapters": [
+                {
+                  "id": "chapter-1",
+                  "title": "Introduction",
+                  "start": 0,
+                  "end": 600
+                },
+                {
+                  "id": "chapter-2",
+                  "title": "Pragmatic Thinking",
+                  "start": 600,
+                  "end": 1200
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val result = parseLibraryItemDetail(payload, "http://abs.local")
+
+        assertEquals("item-1", result.item.id)
+        assertEquals("The Pragmatic Programmer", result.item.title)
+        assertEquals(42, result.progressPercent)
+        assertEquals("A classic software engineering book.", result.description)
+        assertEquals(2, result.chapters.size)
+        assertEquals("chapter-1", result.chapters.first().id)
+        assertEquals("Introduction", result.chapters.first().title)
+        assertEquals(0, result.chapters.first().startSeconds)
+        assertEquals(600, result.chapters.first().endSeconds)
+        assertEquals("http://abs.local/api/items/item-1/cover", result.item.coverUrl)
+    }
 }

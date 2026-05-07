@@ -62,6 +62,11 @@ fun ShelfPlayerApp() {
     var connectionLoadFailed by remember { mutableStateOf(false) }
     var initializationAttempt by rememberSaveable { mutableStateOf(0) }
     var selectedLibraryItemId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedLibraryItemDetailState by remember { mutableStateOf<ItemDetailState>(ItemDetailState.Loading) }
+    var selectedLibraryItemDetailReloadKey by rememberSaveable { mutableStateOf(0) }
+    var selectedChapterId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedChapterStartSeconds by rememberSaveable { mutableStateOf<Int?>(null) }
+    var playbackRequestKey by rememberSaveable { mutableStateOf(0) }
 
     fun resolveLibraryItem(itemId: String): LibraryItem? {
         val currentItems = when (val state = libraryFeedState) {
@@ -70,6 +75,11 @@ fun ShelfPlayerApp() {
             else -> emptyList()
         }
         return currentItems.firstOrNull { it.id == itemId }
+    }
+
+    fun resolveSelectedChapterStartSeconds(chapterId: String): Int? {
+        val detail = (selectedLibraryItemDetailState as? ItemDetailState.Loaded)?.detail ?: return null
+        return detail.chapters.firstOrNull { it.id == chapterId }?.startSeconds
     }
 
     LaunchedEffect(context, initializationAttempt) {
@@ -113,6 +123,24 @@ fun ShelfPlayerApp() {
         connectionLoadFailed = connectionLoadFailed,
         connectionSession = connectionSession,
     )
+
+    LaunchedEffect(selectedLibraryItemId, selectedLibraryItemDetailReloadKey) {
+        val itemId = selectedLibraryItemId ?: return@LaunchedEffect
+        selectedLibraryItemDetailState = ItemDetailState.Loading
+        selectedLibraryItemDetailState = runSuspendCatchingPreservingCancellation {
+            withContext(Dispatchers.IO) {
+                libraryRepository.getItemDetail(itemId)
+            }
+        }.fold(
+            onSuccess = { detail ->
+                detail?.let { ItemDetailState.Loaded(it) }
+                    ?: ItemDetailState.Error("Detaildaten konnten nicht gefunden werden")
+            },
+            onFailure = { throwable ->
+                ItemDetailState.Error(throwable.message ?: "Detaildaten konnten nicht geladen werden")
+            },
+        )
+    }
 
     MaterialTheme {
         when (rootState) {
@@ -226,20 +254,62 @@ fun ShelfPlayerApp() {
                     }
                 ) { padding ->
                     when (selectedTab) {
-                        AppTab.Library -> LibraryScreen(
-                            padding = padding,
-                            repository = libraryRepository,
-                            onAppear = { libraryRepository.refresh() },
-                            onRefresh = { libraryRepository.refresh() },
-                            onItemClick = { itemId ->
-                                selectedLibraryItemId = itemId
-                                selectedTab = AppTab.Player
-                            },
-                            onPlayClick = { itemId ->
-                                selectedLibraryItemId = itemId
-                                selectedTab = AppTab.Player
-                            },
-                        )
+                        AppTab.Library -> {
+                            if (selectedLibraryItemId != null) {
+                                ItemDetailScreen(
+                                    padding = padding,
+                                    state = selectedLibraryItemDetailState,
+                                    onBackClick = {
+                                        selectedLibraryItemId = null
+                                        selectedLibraryItemDetailState = ItemDetailState.Loading
+                                        selectedLibraryItemDetailReloadKey++
+                                        selectedChapterId = null
+                                        selectedChapterStartSeconds = null
+                                    },
+                                    onPlayClick = { itemId ->
+                                        selectedLibraryItemId = itemId
+                                        selectedLibraryItemDetailState = ItemDetailState.Loading
+                                        selectedChapterId = null
+                                        selectedChapterStartSeconds = null
+                                        selectedTab = AppTab.Player
+                                        playbackRequestKey++
+                                        selectedLibraryItemDetailReloadKey++
+                                    },
+                                    onChapterSelected = { chapterId ->
+                                        selectedChapterId = chapterId
+                                        selectedChapterStartSeconds = resolveSelectedChapterStartSeconds(chapterId)
+                                        selectedTab = AppTab.Player
+                                        playbackRequestKey++
+                                    },
+                                    onRetry = {
+                                        selectedLibraryItemDetailReloadKey++
+                                    },
+                                )
+                            } else {
+                                LibraryScreen(
+                                    padding = padding,
+                                    repository = libraryRepository,
+                                    onAppear = { libraryRepository.refresh() },
+                                    onRefresh = { libraryRepository.refresh() },
+                                    onItemClick = { itemId ->
+                                        selectedLibraryItemId = itemId
+                                        selectedLibraryItemDetailState = ItemDetailState.Loading
+                                        selectedChapterId = null
+                                        selectedChapterStartSeconds = null
+                                        selectedLibraryItemDetailReloadKey++
+                                    },
+                                    onPlayClick = { itemId ->
+                                        selectedLibraryItemId = itemId
+                                        selectedLibraryItemDetailState = ItemDetailState.Loading
+                                        selectedChapterId = null
+                                        selectedChapterStartSeconds = null
+                                        selectedTab = AppTab.Player
+                                        playbackRequestKey++
+                                        selectedLibraryItemDetailReloadKey++
+                                    },
+                                )
+                            }
+                        }
                         AppTab.Connect -> ConnectionScreen(
                             padding = padding,
                             connectionSession = connectionSession,
@@ -261,6 +331,9 @@ fun ShelfPlayerApp() {
                             padding = padding,
                             activeLibraryItem = selectedLibraryItemId?.let { resolveLibraryItem(it) },
                             connectionCredentials = rememberedConnection,
+                            selectedChapterId = selectedChapterId,
+                            selectedChapterStartSeconds = selectedChapterStartSeconds,
+                            playbackRequestKey = playbackRequestKey,
                         )
                     }
                 }
@@ -274,6 +347,9 @@ private fun PlayerScreen(
     padding: PaddingValues,
     activeLibraryItem: LibraryItem?,
     connectionCredentials: ConnectionCredentials?,
+    selectedChapterId: String?,
+    selectedChapterStartSeconds: Int?,
+    playbackRequestKey: Int,
 ) {
     val context = LocalContext.current
     var mediaPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
@@ -282,6 +358,7 @@ private fun PlayerScreen(
     var playbackError by remember { mutableStateOf<String?>(null) }
     var durationMs by remember { mutableStateOf(0) }
     var positionMs by remember { mutableStateOf(0) }
+    var lastHandledPlaybackRequestKey by rememberSaveable { mutableStateOf(0) }
 
     val itemId = activeLibraryItem?.id
     val streamUrl = remember(itemId, connectionCredentials) {
@@ -299,7 +376,7 @@ private fun PlayerScreen(
         positionMs = 0
     }
 
-    fun startPlayback() {
+    fun startPlayback(startPositionSeconds: Int? = selectedChapterStartSeconds) {
         val url = streamUrl
         val token = connectionCredentials?.accessToken?.takeIf { it.isNotBlank() }
         if (url == null || token == null) {
@@ -317,6 +394,13 @@ private fun PlayerScreen(
         player.setOnPreparedListener {
             isPreparing = false
             durationMs = it.duration.coerceAtLeast(0)
+            val startPositionMs = startPositionSeconds?.coerceAtLeast(0)?.times(1000)
+            if (startPositionMs != null && startPositionMs in 0..durationMs) {
+                it.seekTo(startPositionMs)
+                positionMs = startPositionMs
+            } else {
+                positionMs = 0
+            }
             it.start()
             isPlaying = true
         }
@@ -352,6 +436,13 @@ private fun PlayerScreen(
         }
     }
 
+    LaunchedEffect(playbackRequestKey) {
+        if (playbackRequestKey > lastHandledPlaybackRequestKey && itemId != null && connectionCredentials != null) {
+            lastHandledPlaybackRequestKey = playbackRequestKey
+            startPlayback(selectedChapterStartSeconds)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -382,6 +473,20 @@ private fun PlayerScreen(
             "${formatItemType(activeLibraryItem.itemType)} · Fortschritt ${formatProgress(activeLibraryItem.progressPercent)}",
             style = MaterialTheme.typography.bodyMedium,
         )
+        selectedChapterId?.let {
+            Text(
+                "Kapitel-ID: $it",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        selectedChapterStartSeconds?.let {
+            Text(
+                "Kapitelstart ab ${formatDuration(it * 1000)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
         androidx.compose.material3.LinearProgressIndicator(
             progress = {
