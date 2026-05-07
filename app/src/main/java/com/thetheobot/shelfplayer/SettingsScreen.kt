@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,6 +25,7 @@ import androidx.compose.ui.unit.dp
 
 private val playbackRateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
 private val playbackSkipIntervalOptions = listOf(5, 10, 15, 30, 45, 60)
+private val themeModeOptions = listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK)
 
 internal fun formatSkipInterval(seconds: Int): String = "${seconds}s"
 
@@ -54,6 +54,26 @@ fun SettingsScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        Card(colors = CardDefaults.elevatedCardColors()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("Theme-Modus", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Steuert helles, dunkles oder System-Design für die ganze App.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                SettingsChoiceRow(
+                    selectedValue = settings.themeMode,
+                    options = themeModeOptions,
+                    optionLabel = ::themeModeButtonLabel,
+                    onSelected = { appSettingsRepository.setThemeMode(it) },
+                )
+            }
+        }
 
         Card(colors = CardDefaults.elevatedCardColors()) {
             Column(
@@ -106,17 +126,27 @@ private fun <T> SettingsChoiceRow(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         options.chunked(3).forEach { optionRow ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 optionRow.forEach { option ->
                     val selected = option == selectedValue
                     val label = optionLabel(option)
+                    val buttonModifier = Modifier.weight(1f)
                     if (selected) {
-                        Button(onClick = { onSelected(option) }) {
-                            Text(label)
+                        Button(
+                            modifier = buttonModifier,
+                            onClick = { onSelected(option) },
+                        ) {
+                            Text(label, maxLines = 1)
                         }
                     } else {
-                        OutlinedButton(onClick = { onSelected(option) }) {
-                            Text(label)
+                        OutlinedButton(
+                            modifier = buttonModifier,
+                            onClick = { onSelected(option) },
+                        ) {
+                            Text(label, maxLines = 1)
                         }
                     }
                 }

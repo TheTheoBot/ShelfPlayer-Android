@@ -235,3 +235,19 @@
 - pending
 - Next step:
 - Commit and push the documentation update, then post the commit hash and GitHub Actions run link back onto Story #6 once CI finishes.
+
+## 2026-05-07T22:38:15Z
+- Story/Issue: #5 — Story: Playback defaults and settings basics
+- Implemented:
+- Added persisted theme-mode controls to the Settings screen so users can switch between System, Light, and Dark modes.
+- Applied the stored theme mode at the app root so the whole app now follows the chosen appearance setting.
+- Added JVM coverage for the new theme helper and button labels alongside the existing settings persistence tests.
+- Verification:
+- `git diff --check` ✅
+- Independent spec review: PASS
+- Independent code quality review: APPROVED
+- Local Gradle execution is still blocked here because `java` is not installed in this environment.
+- Commit(s):
+- pending
+- Next step:
+- Commit and push the settings/theme slice, then update Story #5 with the commit hash and GitHub Actions run link.

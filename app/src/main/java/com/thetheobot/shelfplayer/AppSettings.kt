@@ -11,6 +11,22 @@ enum class ThemeMode {
     DARK,
 }
 
+internal fun shouldUseDarkTheme(themeMode: ThemeMode, systemDarkTheme: Boolean): Boolean {
+    return when (themeMode) {
+        ThemeMode.SYSTEM -> systemDarkTheme
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+}
+
+internal fun themeModeButtonLabel(themeMode: ThemeMode): String {
+    return when (themeMode) {
+        ThemeMode.SYSTEM -> "SYSTEM"
+        ThemeMode.LIGHT -> "LIGHT"
+        ThemeMode.DARK -> "DARK"
+    }
+}
+
 data class AppSettings(
     val playbackSkipIntervalSeconds: Int = DEFAULT_PLAYBACK_SKIP_INTERVAL_SECONDS,
     val defaultPlaybackRate: Float = DEFAULT_PLAYBACK_RATE,

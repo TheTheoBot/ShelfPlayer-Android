@@ -110,4 +110,19 @@ class AppSettingsRepositoryTest {
             repository.settings.value,
         )
     }
+
+    @Test
+    fun `theme mode helper maps system light and dark correctly`() {
+        assertEquals(false, shouldUseDarkTheme(ThemeMode.LIGHT, systemDarkTheme = true))
+        assertEquals(true, shouldUseDarkTheme(ThemeMode.DARK, systemDarkTheme = false))
+        assertEquals(true, shouldUseDarkTheme(ThemeMode.SYSTEM, systemDarkTheme = true))
+        assertEquals(false, shouldUseDarkTheme(ThemeMode.SYSTEM, systemDarkTheme = false))
+    }
+
+    @Test
+    fun `theme mode button labels stay concise and uppercase`() {
+        assertEquals("SYSTEM", themeModeButtonLabel(ThemeMode.SYSTEM))
+        assertEquals("LIGHT", themeModeButtonLabel(ThemeMode.LIGHT))
+        assertEquals("DARK", themeModeButtonLabel(ThemeMode.DARK))
+    }
 }
