@@ -204,14 +204,19 @@
 - Next step:
 - Commit and push this player/progress slice, then update the GitHub story issue with the commit hash and CI run link.
 
-## 2026-05-07T19:58:49Z
-- Story/Issue: #4 — Story: Player progress sync and resume
+## 2026-05-07T21:08:18Z
+- Story/Issue: #5 — Story: Playback defaults and settings basics
 - Implemented:
-  - Fixed the local playback startup failure path by removing the illegal private modifier from the local cleanup helper so the Android build compiles again.
+- Added a SharedPreferences-backed app settings repository for playback skip interval, default playback rate, and theme mode.
+- Wired a new Settings screen into the app shell so playback defaults can be updated from within the app.
+- Connected persisted playback defaults into the player: startup rate now seeds from stored settings and skip buttons use the saved interval.
+- Added JVM coverage for settings persistence, invalid-value normalization, and settings helper formatting.
 - Verification:
-  - `git diff --check` ✅
-  - Android CI rerun pending after the fix commit.
+- `git diff --check` ✅
+- Independent spec review: PASS
+- Independent code quality review: APPROVED
+- Local Gradle execution is still blocked here because `java` is not installed.
 - Commit(s):
-  - pending
+- `6ecc367` — feat: add persisted settings screen
 - Next step:
-  - Commit the startup compile fix, push it, and re-run GitHub Actions to confirm the build is green.
+- Push to GitHub, create/update the Story #5 issue with the commit hash and CI run link, and let GitHub Actions validate the Android build/tests.
