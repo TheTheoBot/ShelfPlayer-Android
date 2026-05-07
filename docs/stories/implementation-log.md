@@ -14,5 +14,6 @@
   - `13edbe2` — ci: add Android unit test workflow
   - `5bc6a1e` — ci: rename Android unit test workflow
   - `30fef45` — ci: fix Android unit test workflow
+  - `0e49cd2` — test: fix malformed URL regression case
 - Next step:
   - Push to `main`, monitor the GitHub Actions run, and continue expanding connection/auth coverage.
