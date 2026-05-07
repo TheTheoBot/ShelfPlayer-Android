@@ -29,8 +29,18 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Install Gradle 8.7
+        run: |
+          GRADLE_VERSION=8.7
+          GRADLE_ZIP="gradle-${GRADLE_VERSION}-bin.zip"
+          curl -fsSL "https://services.gradle.org/distributions/${GRADLE_ZIP}" -o "/tmp/${GRADLE_ZIP}"
+          echo "544c35d6bd849ae8a5ed0bcea39ba677dc40f49df7d1835561582da2009b961d  /tmp/${GRADLE_ZIP}" | sha256sum -c -
+          sudo unzip -q "/tmp/${GRADLE_ZIP}" -d /opt
+          echo "/opt/gradle-${GRADLE_VERSION}/bin" >> "$GITHUB_PATH"
+          gradle --version
+
       - name: Build debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: gradle assembleDebug --stacktrace
 
       - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
