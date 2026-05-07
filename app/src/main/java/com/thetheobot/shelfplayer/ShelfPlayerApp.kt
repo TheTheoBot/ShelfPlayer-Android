@@ -49,10 +49,14 @@ fun ShelfPlayerApp() {
     var connectionStore by remember { mutableStateOf<ConnectionCredentialsStore?>(null) }
     var connectionStoreReady by remember { mutableStateOf(false) }
     var connectionInitFailed by remember { mutableStateOf(false) }
-    val libraryRepository = remember { InMemoryLibraryRepository() }
+    var rememberedConnection by remember { mutableStateOf<ConnectionCredentials?>(null) }
+    val libraryRepository = remember {
+        AudiobookshelfLibraryRepository(
+            connectionProvider = { rememberedConnection },
+        )
+    }
     val libraryFeedState by libraryRepository.libraryFeedState.collectAsState()
     var selectedTab by rememberSaveable { mutableStateOf(AppTab.Library) }
-    var rememberedConnection by remember { mutableStateOf<ConnectionCredentials?>(null) }
     var connectionLoadFailed by remember { mutableStateOf(false) }
     var initializationAttempt by rememberSaveable { mutableStateOf(0) }
     var selectedLibraryItemId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -275,11 +279,11 @@ private fun PlayerScreen(
         Text("Now Playing", style = MaterialTheme.typography.labelLarge)
         if (activeLibraryItem == null) {
             Text(
-                "Project Hail Mary",
+                "Kein Titel ausgewählt",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
             )
-            Text("Kapitel 12 · 03:41:52 verbleibend", style = MaterialTheme.typography.bodyMedium)
+            Text("Wähle einen Eintrag aus der Bibliothek.", style = MaterialTheme.typography.bodyMedium)
         } else {
             Text(
                 activeLibraryItem.title,

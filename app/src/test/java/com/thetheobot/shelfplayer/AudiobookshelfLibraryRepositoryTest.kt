@@ -1,0 +1,48 @@
+package com.thetheobot.shelfplayer
+
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class AudiobookshelfLibraryRepositoryTest {
+    @Test
+    fun `parseLibraryItems maps audiobookshelf payload to library items`() {
+        val payload = """
+            {
+              "results": [
+                {
+                  "id": "item-1",
+                  "title": "The Pragmatic Programmer",
+                  "mediaType": "book",
+                  "authorName": "Andrew Hunt",
+                  "progress": 0.42,
+                  "coverPath": "/api/items/item-1/cover"
+                },
+                {
+                  "id": "item-2",
+                  "title": "DevOps Radio",
+                  "mediaType": "podcast",
+                  "media": {
+                    "authorName": "Jane Doe"
+                  }
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val result = parseLibraryItems(payload, "http://abs.local")
+
+        assertEquals(2, result.size)
+        assertEquals("item-1", result[0].id)
+        assertEquals("The Pragmatic Programmer", result[0].title)
+        assertEquals("Andrew Hunt", result[0].author)
+        assertEquals(42, result[0].progressPercent)
+        assertEquals(LibraryItemType.Book, result[0].itemType)
+        assertEquals("http://abs.local/api/items/item-1/cover", result[0].coverUrl)
+
+        assertEquals("item-2", result[1].id)
+        assertEquals("Jane Doe", result[1].author)
+        assertEquals(0, result[1].progressPercent)
+        assertEquals(LibraryItemType.Podcast, result[1].itemType)
+        assertEquals("http://abs.local/api/items/item-2/cover", result[1].coverUrl)
+    }
+}

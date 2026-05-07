@@ -83,7 +83,7 @@ class LibraryRepositoryTest {
             libraryFeedStateTitle(LibraryFeedState.Loaded(listOf(sampleItem))),
         )
         assertEquals(
-            "Titel, Autor und Fortschritt sind sofort sichtbar.",
+            "Titel, Autor und Fortschritt werden direkt vom Audiobookshelf-Server geladen.",
             libraryFeedStateMessage(LibraryFeedState.Loaded(listOf(sampleItem))),
         )
     }
@@ -105,7 +105,7 @@ class LibraryRepositoryTest {
         assertEquals(listOf("refresh-id"), refreshingState.visibleItems().map { it.id })
         assertEquals("Bibliothek wird aktualisiert · 1 Eintrag sichtbar", libraryFeedStateTitle(refreshingState))
         assertEquals(
-            "Vorhandene Einträge bleiben sichtbar, während neue Daten nachgeladen werden.",
+            "Vorhandene Einträge bleiben sichtbar, während neue Serverdaten nachgeladen werden.",
             libraryFeedStateMessage(refreshingState),
         )
     }
@@ -114,7 +114,7 @@ class LibraryRepositoryTest {
     fun `library feed helper exposes stable copy for loading copy`() {
         assertEquals("Bibliothek wird geladen…", libraryFeedStateTitle(LibraryFeedState.Loading))
         assertEquals(
-            "Die Demo-Bibliothek wird vorbereitet.",
+            "Audiobookshelf-Daten werden geladen.",
             libraryFeedStateMessage(LibraryFeedState.Loading),
         )
         assertEquals(

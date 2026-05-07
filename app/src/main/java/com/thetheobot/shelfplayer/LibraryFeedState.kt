@@ -63,8 +63,8 @@ internal fun libraryFeedStateTitle(state: LibraryFeedState): String {
 
 internal fun libraryFeedStateMessage(state: LibraryFeedState): String {
     return when (state) {
-        LibraryFeedState.Loading -> "Die Demo-Bibliothek wird vorbereitet."
-        LibraryFeedState.Empty -> "Sobald Inhalte verfügbar sind, erscheinen sie hier."
+        LibraryFeedState.Loading -> "Audiobookshelf-Daten werden geladen."
+        LibraryFeedState.Empty -> "Keine Inhalte gefunden. Prüfe Bibliothek und Filter im Server."
         is LibraryFeedState.Error -> {
             if (state.message.isBlank()) {
                 "Bitte später erneut versuchen."
@@ -72,7 +72,7 @@ internal fun libraryFeedStateMessage(state: LibraryFeedState): String {
                 state.message
             }
         }
-        is LibraryFeedState.Loaded -> "Titel, Autor und Fortschritt sind sofort sichtbar."
-        is LibraryFeedState.Refreshing -> "Vorhandene Einträge bleiben sichtbar, während neue Daten nachgeladen werden."
+        is LibraryFeedState.Loaded -> "Titel, Autor und Fortschritt werden direkt vom Audiobookshelf-Server geladen."
+        is LibraryFeedState.Refreshing -> "Vorhandene Einträge bleiben sichtbar, während neue Serverdaten nachgeladen werden."
     }
 }
