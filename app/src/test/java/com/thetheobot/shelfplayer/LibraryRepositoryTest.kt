@@ -209,6 +209,25 @@ class LibraryRepositoryTest {
         assertEquals("Keine Treffer für \"project\"", searchStateTitle(SearchState.NoResults("project")))
         assertEquals("Bitte später erneut versuchen.", searchStateMessage(SearchState.Error(query = "project", message = "   ")))
         assertEquals(listOf("project-hail-mary"), resultsState.resultsOrEmpty().map { it.id })
+        assertEquals("project hail mary", normalizedSearchQuery("  project hail mary  "))
+        assertEquals("Suche löschen", resultsState.clearSearchActionLabel())
+        assertTrue(resultsState.canClearSearch())
+        assertTrue(SearchState.NoResults("project").canClearSearch())
+        assertEquals("Suche löschen", SearchState.Error(query = "project", message = "boom").clearSearchActionLabel())
+        assertEquals("Suche löschen", SearchState.Error(query = "", message = "boom").clearSearchActionLabel())
+        assertTrue(SearchState.Typing("project").canClearSearch())
+        assertTrue(SearchState.Searching("project").canClearSearch())
+        assertTrue(SearchState.Error(query = "", message = "boom").isRefreshErrorState())
+        assertTrue(!SearchState.Error(query = "project", message = "boom").isRefreshErrorState())
+        assertEquals(null, SearchState.Idle.clearSearchActionLabel())
+
+        val tracker = SearchSubmissionTracker()
+        val firstToken = tracker.nextToken()
+        assertTrue(tracker.accepts(firstToken))
+        tracker.invalidate()
+        assertTrue(!tracker.accepts(firstToken))
+        val secondToken = tracker.nextToken()
+        assertTrue(tracker.accepts(secondToken))
     }
 
     @Test

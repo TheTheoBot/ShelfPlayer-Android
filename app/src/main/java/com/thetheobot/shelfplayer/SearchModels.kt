@@ -59,6 +59,50 @@ internal fun searchStateMessage(state: SearchState): String {
     }
 }
 
+internal fun normalizedSearchQuery(query: String): String {
+    return query.trim()
+}
+
+internal class SearchSubmissionTracker {
+    private var generation = 0
+
+    fun nextToken(): Int {
+        generation += 1
+        return generation
+    }
+
+    fun invalidate() {
+        generation += 1
+    }
+
+    fun accepts(token: Int): Boolean {
+        return token == generation
+    }
+}
+
+internal fun SearchState.canClearSearch(): Boolean {
+    return when (this) {
+        is SearchState.Typing,
+        is SearchState.Searching,
+        is SearchState.Results,
+        is SearchState.NoResults -> normalizedSearchQuery(query).isNotBlank()
+        is SearchState.Error -> true
+        else -> false
+    }
+}
+
+internal fun SearchState.clearSearchActionLabel(): String? {
+    return if (canClearSearch()) {
+        "Suche löschen"
+    } else {
+        null
+    }
+}
+
+internal fun SearchState.isRefreshErrorState(): Boolean {
+    return this is SearchState.Error && normalizedSearchQuery(query).isBlank()
+}
+
 internal fun SearchState.resultsOrEmpty(): List<LibraryItem> {
     return when (this) {
         is SearchState.Results -> items

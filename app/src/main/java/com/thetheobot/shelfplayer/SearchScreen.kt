@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -56,14 +57,23 @@ fun SearchScreen(
     var loadErrorMessage by remember { mutableStateOf<String?>(null) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
+    val searchSubmissionTracker = remember { SearchSubmissionTracker() }
 
     fun refreshLibrary() {
         scope.launch {
             val refreshResult = runSuspendCatchingPreservingCancellation {
                 repository.refresh()
             }
-            loadErrorMessage = refreshResult.exceptionOrNull()?.message
-            if (loadErrorMessage != null && searchState is SearchState.Idle && query.isBlank()) {
+            val refreshErrorMessage = refreshResult.exceptionOrNull()?.message?.takeIf { it.isNotBlank() }
+            loadErrorMessage = refreshErrorMessage ?: if (refreshResult.isFailure) {
+                "Bibliothek konnte nicht geladen werden"
+            } else {
+                null
+            }
+            if (refreshResult.isSuccess && searchState.isRefreshErrorState()) {
+                searchState = SearchState.Idle
+            }
+            if (loadErrorMessage != null && searchState is SearchState.Idle && normalizedSearchQuery(query).isBlank()) {
                 searchState = SearchState.Error(
                     query = "",
                     message = loadErrorMessage ?: "Bibliothek konnte nicht geladen werden",
@@ -72,30 +82,44 @@ fun SearchScreen(
         }
     }
 
+    fun clearSearch() {
+        query = ""
+        searchState = SearchState.Idle
+        loadErrorMessage = null
+        searchSubmissionTracker.invalidate()
+    }
+
     fun submitSearch() {
-        val trimmedQuery = query.trim()
-        if (trimmedQuery.isBlank()) {
+        val normalizedQuery = normalizedSearchQuery(query)
+        if (normalizedQuery.isBlank()) {
             searchState = SearchState.Idle
             return
         }
 
+        val requestToken = searchSubmissionTracker.nextToken()
         scope.launch {
-            searchState = SearchState.Searching(trimmedQuery)
+            if (!searchSubmissionTracker.accepts(requestToken)) {
+                return@launch
+            }
+            searchState = SearchState.Searching(normalizedQuery)
             loadErrorMessage = null
             val result = runSuspendCatchingPreservingCancellation {
-                repository.search(trimmedQuery)
+                repository.search(normalizedQuery)
+            }
+            if (!searchSubmissionTracker.accepts(requestToken)) {
+                return@launch
             }
             result.fold(
                 onSuccess = { items ->
                     searchState = if (items.isEmpty()) {
-                        SearchState.NoResults(trimmedQuery)
+                        SearchState.NoResults(normalizedQuery)
                     } else {
-                        SearchState.Results(trimmedQuery, items)
+                        SearchState.Results(normalizedQuery, items)
                     }
                 },
                 onFailure = { throwable ->
                     searchState = SearchState.Error(
-                        query = trimmedQuery,
+                        query = normalizedQuery,
                         message = throwable.message ?: "Suche konnte nicht ausgeführt werden",
                     )
                 },
@@ -125,8 +149,8 @@ fun SearchScreen(
             value = query,
             onValueChange = {
                 query = it
-                loadErrorMessage = null
-                searchState = if (it.trim().isBlank()) {
+                searchSubmissionTracker.invalidate()
+                searchState = if (normalizedSearchQuery(it).isBlank()) {
                     SearchState.Idle
                 } else {
                     SearchState.Typing(it)
@@ -147,18 +171,24 @@ fun SearchScreen(
 
         if (loadErrorMessage != null && searchState !is SearchState.Results && searchState !is SearchState.NoResults) {
             val errorState = SearchState.Error(query = query.trim(), message = loadErrorMessage.orEmpty())
+            val clearActionLabel = errorState.clearSearchActionLabel()
             SearchStatusCard(
                 title = searchStateTitle(errorState),
                 message = searchStateMessage(errorState),
                 showSpinner = false,
                 onRetry = { refreshLibrary() },
+                onClear = clearActionLabel?.let { { clearSearch() } },
+                clearActionLabel = clearActionLabel,
             )
         } else {
+            val clearActionLabel = searchState.clearSearchActionLabel()
             SearchStatusCard(
                 title = searchStateTitle(searchState),
                 message = searchStateMessage(searchState),
                 showSpinner = searchState is SearchState.Searching,
                 onRetry = if (searchState is SearchState.Error) ({ submitSearch() }) else null,
+                onClear = clearActionLabel?.let { { clearSearch() } },
+                clearActionLabel = clearActionLabel,
             )
         }
 
@@ -210,6 +240,8 @@ private fun SearchStatusCard(
     message: String,
     showSpinner: Boolean,
     onRetry: (() -> Unit)? = null,
+    onClear: (() -> Unit)? = null,
+    clearActionLabel: String? = null,
 ) {
     Card(colors = CardDefaults.elevatedCardColors()) {
         Column(
@@ -227,9 +259,32 @@ private fun SearchStatusCard(
                 Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }
             Text(message, style = MaterialTheme.typography.bodyMedium)
-            onRetry?.let {
-                OutlinedButton(onClick = it) {
-                    Text("Erneut versuchen")
+            val actions = listOfNotNull(
+                onRetry?.let { "Erneut versuchen" to it },
+                onClear?.let { (clearActionLabel ?: "Suche löschen") to it },
+            )
+            if (actions.isNotEmpty()) {
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    if (maxWidth < 360.dp) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            actions.forEach { (label, action) ->
+                                OutlinedButton(
+                                    onClick = action,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(label)
+                                }
+                            }
+                        }
+                    } else {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            actions.forEach { (label, action) ->
+                                OutlinedButton(onClick = action) {
+                                    Text(label)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
