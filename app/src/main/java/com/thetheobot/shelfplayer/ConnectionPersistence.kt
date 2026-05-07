@@ -49,9 +49,9 @@ class EncryptedConnectionCredentialsStore(
             val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
 
             val sharedPreferences = EncryptedSharedPreferences.create(
-                appContext,
                 CONNECTION_PREFS_FILE,
                 masterKeyAlias,
+                appContext,
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
             )
