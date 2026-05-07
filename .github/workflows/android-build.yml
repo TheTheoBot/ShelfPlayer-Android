@@ -1,0 +1,37 @@
+name: Android CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      # Gradle is pinned because this repo does not yet ship a wrapper.
+      # 8.7 is compatible with the current Android Gradle Plugin version.
+      - name: Build debug APK
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.7
+          arguments: assembleDebug
