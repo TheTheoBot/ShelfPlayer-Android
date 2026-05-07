@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -51,12 +54,6 @@ private enum class AppTab(val label: String) {
     Player("Player"),
 }
 
-private enum class AppRootState {
-    Loading,
-    FatalError,
-    Ready,
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShelfPlayerApp() {
@@ -67,8 +64,9 @@ fun ShelfPlayerApp() {
     var selectedTab by rememberSaveable { mutableStateOf(AppTab.Library) }
     var rememberedConnection by remember { mutableStateOf<ConnectionCredentials?>(null) }
     var connectionLoadFailed by remember { mutableStateOf(false) }
+    var initializationAttempt by rememberSaveable { mutableStateOf(0) }
 
-    LaunchedEffect(context) {
+    LaunchedEffect(context, initializationAttempt) {
         val initializedStoreResult = runSuspendCatchingPreservingCancellation {
             withContext(Dispatchers.IO) {
                 EncryptedConnectionCredentialsStore.create(context)
@@ -77,8 +75,8 @@ fun ShelfPlayerApp() {
 
         val initializedStore = initializedStoreResult.getOrNull()
         if (initializedStore == null) {
-            connectionInitFailed = true
             connectionStoreReady = true
+            connectionInitFailed = true
             return@LaunchedEffect
         }
 
@@ -93,12 +91,22 @@ fun ShelfPlayerApp() {
         connectionStoreReady = true
     }
 
-    val connectionSession = ConnectionSession(savedConnection = rememberedConnection)
-    val rootState = when {
-        !connectionStoreReady -> AppRootState.Loading
-        connectionInitFailed || connectionStore == null -> AppRootState.FatalError
-        else -> AppRootState.Ready
+    fun retryConnectionStoreInitialization() {
+        connectionStore = null
+        rememberedConnection = null
+        connectionLoadFailed = false
+        connectionInitFailed = false
+        connectionStoreReady = false
+        initializationAttempt++
     }
+
+    val connectionSession = ConnectionSession(savedConnection = rememberedConnection)
+    val rootState = resolveAppRootState(
+        connectionStoreReady = connectionStoreReady,
+        connectionInitFailed = connectionInitFailed,
+        connectionLoadFailed = connectionLoadFailed,
+        connectionSession = connectionSession,
+    )
 
     MaterialTheme {
         when (rootState) {
@@ -114,6 +122,42 @@ fun ShelfPlayerApp() {
                 }
             }
 
+            AppRootState.NoConnection -> {
+                ConnectionScreen(
+                    padding = PaddingValues(0.dp),
+                    connectionSession = connectionSession,
+                    onConnectionSaved = { savedConnection ->
+                        runSuspendCatchingPreservingCancellation {
+                            withContext(Dispatchers.IO) {
+                                connectionStore?.save(savedConnection) ?: false
+                            }
+                        }.getOrDefault(false).also { saved ->
+                            if (saved) {
+                                connectionLoadFailed = false
+                                rememberedConnection = savedConnection
+                                selectedTab = AppTab.Library
+                            }
+                        }
+                    },
+                )
+            }
+
+            AppRootState.LoadError -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text("ShelfPlayer konnte die gespeicherte Verbindung nicht laden.")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { retryConnectionStoreInitialization() }) {
+                        Text("Nochmal versuchen")
+                    }
+                }
+            }
+
             AppRootState.FatalError -> {
                 Column(
                     modifier = Modifier
@@ -123,6 +167,10 @@ fun ShelfPlayerApp() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text("ShelfPlayer konnte den Verbindungsspeicher nicht initialisieren.")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { retryConnectionStoreInitialization() }) {
+                        Text("Nochmal versuchen")
+                    }
                 }
             }
 

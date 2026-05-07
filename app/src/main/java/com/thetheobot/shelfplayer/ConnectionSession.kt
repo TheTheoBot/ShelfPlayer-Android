@@ -10,6 +10,10 @@ data class ConnectionSession(
         get() = serverUrl.isNotBlank()
 }
 
+fun ConnectionSession.shouldShowOnboarding(): Boolean {
+    return !hasSavedServer
+}
+
 fun connectionSessionStatusText(session: ConnectionSession): String {
     return if (session.hasSavedServer) {
         "Gespeicherter Server: ${session.serverUrl}"
