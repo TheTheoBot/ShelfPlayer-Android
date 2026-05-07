@@ -154,3 +154,20 @@
   - pending
 - Next step:
   - Commit and push this library slice, then let GitHub Actions confirm the Android build/tests and update the story issue with the new run link.
+
+## 2026-05-07T15:34:21Z
+- Story/Issue: #3 — Story: Item detail + chapter list basis
+- Implemented:
+  - Added item-detail domain models and repository lookup support for Audiobookshelf and the in-memory slice.
+  - Added an item detail screen with header, expandable description, explicit Play/Pause and Ab hier abspielen actions, and chapter cards.
+  - Wired library item selection into item detail, and wired detail/chapter playback into the player with a one-shot playback request flow.
+  - Added regression tests for detail parsing, progress/formatting helpers, and in-memory detail lookup.
+- Verification:
+  - `git diff --check` ✅
+  - Local Gradle execution unavailable here because `java` and `kotlinc` are not installed.
+  - Independent spec review: PASS
+  - Independent code quality review: PASS
+- Commit(s):
+  - `0d92849` — feat: add item detail playback flow
+- Next step:
+  - Push, create/update the story issue, and post the GitHub Actions run link once CI finishes.

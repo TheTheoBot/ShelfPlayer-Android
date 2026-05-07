@@ -25,6 +25,20 @@ class LibraryRepositoryTest {
     }
 
     @Test
+    fun `in memory repository exposes chapter detail lookup for seeded items`() = runBlocking {
+        val repository = InMemoryLibraryRepository()
+
+        repository.refresh()
+
+        val detail = repository.getItemDetail("project-hail-mary")
+
+        assertEquals("Project Hail Mary", detail?.item?.title)
+        assertTrue(detail?.description?.isNotBlank() == true)
+        assertTrue(detail?.chapters?.isNotEmpty() == true)
+        assertEquals("chapter-1", detail?.chapters?.first()?.id)
+    }
+
+    @Test
     fun `in memory repository copies the initial item list defensively`() = runBlocking {
         val mutableItems = mutableListOf(
             LibraryItem(
@@ -173,5 +187,37 @@ class LibraryRepositoryTest {
         assertEquals("100%", formatProgress(103))
         assertEquals("Podcast", formatItemType(LibraryItemType.Podcast))
         assertEquals("Serie", formatItemType(LibraryItemType.Series))
+    }
+
+    @Test
+    fun `item detail helpers summarize loading loaded and error states`() {
+        val detail = LibraryItemDetail(
+            item = LibraryItem(
+                id = "example-id",
+                title = "Example Title",
+                author = "Example Author",
+                progressPercent = 44,
+                itemType = LibraryItemType.Audiobook,
+            ),
+            progressPercent = 44,
+            description = "A long-form description for the item detail screen.",
+            chapters = listOf(
+                LibraryChapter(id = "chapter-1", title = "Intro", startSeconds = 0, endSeconds = 120),
+            ),
+        )
+
+        assertEquals("Details werden geladen…", itemDetailStateTitle(ItemDetailState.Loading))
+        assertEquals(
+            "Die Detailansicht wird vorbereitet.",
+            itemDetailStateMessage(ItemDetailState.Loading),
+        )
+        assertEquals("Example Title", itemDetailStateTitle(ItemDetailState.Loaded(detail)))
+        assertEquals(
+            "1 Kapitel · 44% · A long-form description for the item detail screen.",
+            itemDetailStateMessage(ItemDetailState.Loaded(detail)),
+        )
+        assertEquals("Bitte später erneut versuchen.", itemDetailStateMessage(ItemDetailState.Error(message = "   ")))
+        assertEquals("03:20 – 05:00", formatChapterRange(200, 300))
+        assertEquals("03:20", formatChapterRange(200, null))
     }
 }
