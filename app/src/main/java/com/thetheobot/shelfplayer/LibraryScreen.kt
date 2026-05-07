@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.weight
+
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -238,7 +238,7 @@ private fun LibraryItemCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 LibraryItemThumbnail(item = item)
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.fillMaxWidth(0.72f)) {
                     Text(item.title, style = MaterialTheme.typography.titleMedium)
                     Text(item.author, style = MaterialTheme.typography.bodyMedium)
                 }
