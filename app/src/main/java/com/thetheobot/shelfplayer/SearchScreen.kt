@@ -312,7 +312,7 @@ private fun SearchResultCard(
                 Text(item.title, style = MaterialTheme.typography.titleMedium)
                 Text(item.author, style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    "${formatItemType(item.itemType)} · ${formatProgress(item.progressPercent)}",
+                    formatLibraryItemMetadata(item),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

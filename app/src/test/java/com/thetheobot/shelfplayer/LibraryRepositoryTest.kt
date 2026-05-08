@@ -279,11 +279,20 @@ class LibraryRepositoryTest {
     }
 
     @Test
-    fun `library screen helpers clamp progress and translate item types`() {
+    fun `library screen helpers clamp progress translate item types and format metadata`() {
+        val item = LibraryItem(
+            id = "example-id",
+            title = "Example Title",
+            author = "Example Author",
+            progressPercent = 44,
+            itemType = LibraryItemType.Audiobook,
+        )
+
         assertEquals("0%", formatProgress(-4))
         assertEquals("100%", formatProgress(103))
         assertEquals("Podcast", formatItemType(LibraryItemType.Podcast))
         assertEquals("Serie", formatItemType(LibraryItemType.Series))
+        assertEquals("Hörbuch · 44%", formatLibraryItemMetadata(item))
     }
 
     @Test
