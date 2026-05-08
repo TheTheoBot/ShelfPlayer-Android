@@ -367,6 +367,14 @@ class LibraryRepositoryTest {
     }
 
     @Test
+    fun `playback helpers report whether periodic progress sync should continue`() {
+        assertTrue(shouldSyncPlaybackProgress("item-1", "item-1", isPlayingPlayback = true, isPreparingPlayback = false))
+        assertTrue(!shouldSyncPlaybackProgress("item-1", "item-1", isPlayingPlayback = false, isPreparingPlayback = false))
+        assertTrue(!shouldSyncPlaybackProgress("item-1", "item-1", isPlayingPlayback = true, isPreparingPlayback = true))
+        assertTrue(!shouldSyncPlaybackProgress("item-1", "item-2", isPlayingPlayback = true, isPreparingPlayback = false))
+    }
+
+    @Test
     fun `playback progress helper reuses requested chapter or saved progress for the same item`() {
         val savedProgress = PlaybackProgressSnapshot(
             itemId = "item-1",

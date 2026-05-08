@@ -304,3 +304,19 @@
 - `afa6061` — docs: log search metadata refactor
 - Next step:
 - Continue polishing search UX only if future CI signals a regression; otherwise move to the next MVP slice.
+
+## 2026-05-08T02:01:21Z
+- Story/Issue: #4 — Story: Player progress sync and resume
+- Implemented:
+- Added a playback progress autosync loop that refreshes the local/remote snapshot while an item is actively playing.
+- Stopped the autosync loop cleanly on pause, completion, release, and disposal so the player does not keep syncing after playback ends.
+- Added a small unit-testable helper for the autosync gating logic and regression coverage for the helper behavior.
+- Verification:
+- `git diff --check` ✅
+- Static diff scan: no secrets / shell injection / eval / pickle / SQL injection matches
+- Local Android build/test execution remains blocked here because `java` is not installed.
+- Independent spec review: PASS
+- Independent code quality review: REQUEST_CHANGES (fixed blocking dispose-time sync and tightened cleanup)
+- Commit(s): pending
+- Next step:
+- Re-run review after the cleanup fix, then commit, push, and update Story #4 with the commit hash and CI run link.

@@ -48,7 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -94,6 +94,15 @@ internal fun playbackActionEnabled(
     return !(isPreparingPlayback && playbackActiveItemId == itemId)
 }
 
+internal fun shouldSyncPlaybackProgress(
+    playbackActiveItemId: String?,
+    itemId: String,
+    isPlayingPlayback: Boolean,
+    isPreparingPlayback: Boolean,
+): Boolean {
+    return playbackActiveItemId == itemId && isPlayingPlayback && !isPreparingPlayback
+}
+
 internal fun playbackProgressFraction(positionMs: Int, durationMs: Int): Float {
     if (durationMs <= 0) return 0f
     return (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
@@ -118,6 +127,7 @@ internal fun formatPlaybackRate(rate: Float): String {
 
 private val playbackRateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
 private const val playbackPrepareTimeoutMs = 15_000L
+private const val playbackProgressSyncIntervalMs = 30_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,6 +167,7 @@ fun ShelfPlayerApp() {
     var playbackPositionMs by remember { mutableStateOf(0) }
     var playbackRate by rememberSaveable { mutableStateOf(appSettings.defaultPlaybackRate) }
     var playbackPrepareWatchdogToken by remember { mutableStateOf(0) }
+    var playbackProgressSyncJob by remember { mutableStateOf<Job?>(null) }
     val playbackProgressNamespace = rememberedConnection
         ?.serverUrl
         ?.takeIf { it.isNotBlank() }
@@ -280,7 +291,36 @@ fun ShelfPlayerApp() {
         }
     }
 
+    fun flushPlaybackProgressOnDispose() {
+        val itemId = playbackActiveItemId ?: return
+        val durationMs = playbackDurationMs
+        if (durationMs <= 0) return
+        val positionMs = playbackPositionMs.coerceIn(0, durationMs)
+        localProgressRepository.recordProgress(itemId, positionMs, durationMs)
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            progressRepository.syncProgress(itemId, positionMs, durationMs)
+        }
+    }
+
+    fun startPlaybackProgressSyncLoop(itemId: String) {
+        playbackProgressSyncJob?.cancel()
+        playbackProgressSyncJob = playbackProgressScope.launch {
+            while (shouldSyncPlaybackProgress(playbackActiveItemId, itemId, isPlayingPlayback, isPreparingPlayback)) {
+                delay(playbackProgressSyncIntervalMs)
+                if (shouldSyncPlaybackProgress(playbackActiveItemId, itemId, isPlayingPlayback, isPreparingPlayback)) {
+                    syncPlaybackProgressNow()
+                }
+            }
+        }
+    }
+
+    fun stopPlaybackProgressSyncLoop() {
+        playbackProgressSyncJob?.cancel()
+        playbackProgressSyncJob = null
+    }
+
     fun clearPlaybackStateWithoutSync() {
+        stopPlaybackProgressSyncLoop()
         playbackPrepareWatchdogToken += 1
         mediaPlayer?.release()
         mediaPlayer = null
@@ -292,10 +332,10 @@ fun ShelfPlayerApp() {
         playbackError = null
     }
 
-    fun releasePlayback(syncProgressBlocking: Boolean = false) {
+    fun releasePlayback() {
         val activeItemId = playbackActiveItemId
         if (activeItemId != null && playbackDurationMs > 0) {
-            syncPlaybackProgressNow(syncProgressBlocking)
+            syncPlaybackProgressNow()
         }
         clearPlaybackStateWithoutSync()
     }
@@ -339,9 +379,11 @@ fun ShelfPlayerApp() {
             applyPlaybackRate(it, playbackRate)
             it.start()
             isPlayingPlayback = true
+            startPlaybackProgressSyncLoop(itemId)
         }
         player.setOnCompletionListener {
             isPlayingPlayback = false
+            stopPlaybackProgressSyncLoop()
             playbackPositionMs = playbackDurationMs
             syncPlaybackProgressNow()
         }
@@ -372,6 +414,7 @@ fun ShelfPlayerApp() {
         mediaPlayer?.takeIf { it.isPlaying }?.pause()
         playbackPositionMs = mediaPlayer?.currentPosition?.coerceAtLeast(0) ?: playbackPositionMs
         syncPlaybackProgressNow()
+        stopPlaybackProgressSyncLoop()
         isPlayingPlayback = false
     }
 
@@ -385,6 +428,7 @@ fun ShelfPlayerApp() {
         applyPlaybackRate(player, playbackRate)
         player.start()
         isPlayingPlayback = true
+        playbackActiveItemId?.let { startPlaybackProgressSyncLoop(it) }
     }
 
     fun seekPlayback(positionMs: Int) {
@@ -535,18 +579,10 @@ fun ShelfPlayerApp() {
         }
     }
 
-    LaunchedEffect(playbackActiveItemId, isPlayingPlayback, playbackDurationMs) {
-        val itemId = playbackActiveItemId ?: return@LaunchedEffect
-        if (!isPlayingPlayback || playbackDurationMs <= 0) return@LaunchedEffect
-        while (playbackActiveItemId == itemId && isPlayingPlayback) {
-            syncPlaybackProgressNow()
-            delay(30_000)
-        }
-    }
-
     DisposableEffect(Unit) {
         onDispose {
-            releasePlayback(syncProgressBlocking = true)
+            flushPlaybackProgressOnDispose()
+            clearPlaybackStateWithoutSync()
             playbackProgressScope.cancel()
         }
     }
