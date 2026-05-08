@@ -547,19 +547,16 @@
 - Next step:
 - Keep iterating on the next MVP slice while preserving the bottom-nav cleanup and connection shortcut behavior.
 
-## 2026-05-08T16:27:47Z
+## 2026-05-08T17:32:02Z
 - Story/Issue: #12 — Story: Active chapter context follows the playback item
-- Implemented:
-- Added a pure chapter-resolution helper and regression coverage for active chapter lookup at playback positions.
-- Surfaced the active chapter context in the Player tab, highlighted the active quick-access chapter, and gated chapter controls so they only use the currently active playback item.
-- Reset stale playback/detail state when changing connections and when closing item detail so Player no longer reuses chapter data from the wrong item.
+- Micro-task 1: Added regression coverage for the pure chapter helpers in `ItemDetailModels.kt`, including active chapter resolution, wrapper text, matcher behavior, and reset semantics.
+- Micro-task 2: Refactored the Player tab so chapter context and quick-access data are driven by a dedicated playback-item detail state, and stale selected-chapter context resets when the active playback item changes.
+- Micro-task 3: Kept the run log up to date for the current MVP slice.
 - Verification:
-- `git diff --check` ✅
-- Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
-- Local Android Gradle execution is blocked here because Java is not installed in this environment.
-- GitHub Actions run `25567069136` (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25567069136
-- Independent spec review: PASS
-- Independent code quality review: APPROVED
-- Commit(s): `a22c45b` — feat: refine player chapter context
-- Next step:
-- Commit the docs/log follow-up, push it to main, watch the GitHub Actions run, and add the final commit hash plus CI link/status back onto Story #12.
+  - `git diff --check` ✅
+  - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
+  - `./gradlew testDebugUnitTest --tests com.thetheobot.shelfplayer.ItemDetailModelsTest` could not run locally because Java is not installed in this environment (`java: not found`)
+  - Independent spec review: PASS
+  - Independent code quality review: APPROVED
+- Commit(s): `584db99` — feat: refine active chapter playback context
+- Next step: Push to `main`, watch the GitHub Actions run, and update Story #12 with the commit hash and CI run link once the workflow finishes.
