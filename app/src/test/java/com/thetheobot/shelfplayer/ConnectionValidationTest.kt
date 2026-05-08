@@ -62,13 +62,26 @@ class ConnectionValidationTest {
     }
 
     @Test
-    fun `validateServerUrl accepts uppercase remote http url`() {
-        assertNull(validateServerUrl("HTTP://books.example.com"))
+    fun `validateServerUrl rejects remote http url`() {
+        assertEquals(
+            "HTTP ist nur für lokale Entwicklungsserver erlaubt",
+            validateServerUrl("HTTP://books.example.com"),
+        )
     }
 
     @Test
     fun `validateServerUrl accepts local http url for localhost development`() {
         assertNull(validateServerUrl("HTTP://localhost:1337"))
+    }
+
+    @Test
+    fun `validateServerUrl accepts local http url for loopback development`() {
+        assertNull(validateServerUrl("http://127.0.0.1:1337"))
+    }
+
+    @Test
+    fun `validateServerUrl accepts local http url for ipv6 development`() {
+        assertNull(validateServerUrl("http://[::1]:1337"))
     }
 
     @Test
@@ -85,7 +98,26 @@ class ConnectionValidationTest {
     }
 
     @Test
+    fun `validateServerUrl rejects path query and fragment`() {
+        val expectedMessage = "Server-URL darf keinen Pfad, keine Query und kein Fragment enthalten"
+
+        assertEquals(
+            expectedMessage,
+            validateServerUrl("https://books.example.com/path"),
+        )
+        assertEquals(
+            expectedMessage,
+            validateServerUrl("https://books.example.com?q=books"),
+        )
+        assertEquals(
+            expectedMessage,
+            validateServerUrl("https://books.example.com#section"),
+        )
+    }
+
+    @Test
     fun `validateAccessToken rejects blanks`() {
+
         assertEquals("Access Token fehlt", validateAccessToken("   "))
     }
 

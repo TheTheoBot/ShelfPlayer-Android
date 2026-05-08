@@ -1,4 +1,4 @@
-     1|# Implementation Log
+1|# Implementation Log
      2|
      3|## 2026-05-07T07:17:00Z
      4|- Story/Issue: #1 — Story: Harden connection onboarding URL validation
@@ -379,3 +379,15 @@
 - Commit(s): `a90d613` — feat: harden internal route parsing
 - Next step:
 - Commit the CI result update, then update the GitHub issue comment with the commit hash and CI links/status.
+
+## 2026-05-08T05:36:34Z
+- Story issue: pending GitHub issue update
+- Micro-task 1: Hardened connection URL validation so remote plain HTTP is rejected while local development HTTP remains allowed (`localhost`, `127.0.0.1`, `::1`, `10.0.2.2`).
+- Micro-task 2: Added regression coverage for remote HTTP rejection plus path/query/fragment URL rejection in the connection validation tests.
+- Micro-task 3: Added this run’s implementation-log entry for the current MVP slice.
+- Verification:
+  - `git diff --check` ✅
+  - Local Gradle unit test execution is blocked in this environment because `java` is not installed (`./gradlew: line 7: exec: java: not found`).
+  - Validation changes were reviewed with the spec and code quality gate; one URL parsing edge case was fixed before completion.
+- Commit(s): pending
+- Next step: Create/update the GitHub story issue, push the changes, and attach the commit/CI reference back into this log.

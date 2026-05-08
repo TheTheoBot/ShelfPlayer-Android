@@ -66,7 +66,9 @@ fun validateServerUrl(raw: String): String? {
     val uri = runCatching { java.net.URI(trimmed) }.getOrNull()
         ?: return "Server-URL ist ungültig"
 
-    if (!(uri.scheme?.equals("http", ignoreCase = true) == true || uri.scheme?.equals("https", ignoreCase = true) == true)) {
+    val isHttp = uri.scheme?.equals("http", ignoreCase = true) == true
+    val isHttps = uri.scheme?.equals("https", ignoreCase = true) == true
+    if (!(isHttp || isHttps)) {
         return "Server-URL muss mit http:// oder https:// beginnen"
     }
 
@@ -74,11 +76,27 @@ fun validateServerUrl(raw: String): String? {
         return "Server-URL braucht einen Hostnamen"
     }
 
+    if (isHttp && !isAllowedLocalHttpHost(uri.host)) {
+        return "HTTP ist nur für lokale Entwicklungsserver erlaubt"
+    }
+
     if (!uri.userInfo.isNullOrBlank()) {
         return "Server-URL darf keine Zugangsdaten enthalten"
     }
 
+    val hasNonRootPath = uri.rawPath != null && uri.rawPath != "/"
+    if (hasNonRootPath || uri.rawQuery != null || uri.rawFragment != null) {
+        return "Server-URL darf keinen Pfad, keine Query und kein Fragment enthalten"
+    }
+
     return null
+}
+
+private fun isAllowedLocalHttpHost(host: String): Boolean {
+    return host.equals("localhost", ignoreCase = true) ||
+        host == "127.0.0.1" ||
+        host == "::1" ||
+        host == "10.0.2.2"
 }
 
 fun validateAccessToken(raw: String): String? {
