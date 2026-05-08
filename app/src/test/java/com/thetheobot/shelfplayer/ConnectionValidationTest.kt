@@ -94,6 +94,12 @@ class ConnectionValidationTest {
     }
 
     @Test
+    fun `validateServerUrl accepts ip address with custom port and no path`() {
+        assertNull(validateServerUrl("http://192.168.178.24:13378"))
+        assertNull(validateServerUrl("https://192.168.178.24:9443"))
+    }
+
+    @Test
     fun `serverUrlSecurityWarning warns for http urls`() {
         assertEquals(
             "Warnung: HTTP ist unverschlüsselt. Für lokale Setups okay, im Internet bitte HTTPS verwenden.",

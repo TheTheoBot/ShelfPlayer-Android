@@ -81,7 +81,7 @@ fun validateServerUrl(raw: String): String? {
         return "Server-URL darf keine Zugangsdaten enthalten"
     }
 
-    val hasNonRootPath = uri.rawPath != null && uri.rawPath != "/"
+    val hasNonRootPath = !uri.rawPath.isNullOrEmpty() && uri.rawPath != "/"
     if (hasNonRootPath || uri.rawQuery != null || uri.rawFragment != null) {
         return "Server-URL darf keinen Pfad, keine Query und kein Fragment enthalten"
     }
