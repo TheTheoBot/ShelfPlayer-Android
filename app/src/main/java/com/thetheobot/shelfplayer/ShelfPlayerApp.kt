@@ -36,6 +36,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -131,7 +132,11 @@ private const val playbackProgressSyncIntervalMs = 30_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShelfPlayerApp(initialRoute: AppRoute? = null) {
+fun ShelfPlayerApp(
+    initialRoute: AppRoute? = null,
+    launchEventId: Int = 0,
+    launchIntentIsDeepLink: Boolean = false,
+) {
     val context = LocalContext.current.applicationContext
     var connectionStore by remember { mutableStateOf<ConnectionCredentialsStore?>(null) }
     var connectionStoreReady by remember { mutableStateOf(false) }
@@ -150,8 +155,7 @@ fun ShelfPlayerApp(initialRoute: AppRoute? = null) {
     val appSettings by appSettingsRepository.settings.collectAsState()
     val libraryFeedState by libraryRepository.libraryFeedState.collectAsState()
     var selectedTab by rememberSaveable { mutableStateOf(AppTab.Library) }
-    var pendingLaunchSelection by remember { mutableStateOf(appLaunchSelectionForRoute(initialRoute)) }
-    var hasAppliedInitialRoute by rememberSaveable { mutableStateOf(false) }
+    var appliedLaunchEventId by rememberSaveable { mutableIntStateOf(-1) }
     var connectionLoadFailed by remember { mutableStateOf(false) }
     var initializationAttempt by rememberSaveable { mutableStateOf(0) }
     var selectedLibraryItemId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -536,10 +540,23 @@ fun ShelfPlayerApp(initialRoute: AppRoute? = null) {
         connectionSession = connectionSession,
     )
 
-    LaunchedEffect(rootState, pendingLaunchSelection, hasAppliedInitialRoute) {
+    LaunchedEffect(rootState, initialRoute, launchEventId, launchIntentIsDeepLink) {
         if (rootState != AppRootState.Ready) return@LaunchedEffect
-        val launchSelection = pendingLaunchSelection ?: return@LaunchedEffect
-        if (hasAppliedInitialRoute) return@LaunchedEffect
+        if (!shouldApplyAppLaunchEvent(appliedLaunchEventId, launchEventId)) return@LaunchedEffect
+        if (shouldIgnoreDeepLinkLaunch(initialRoute, launchIntentIsDeepLink)) return@LaunchedEffect
+
+        if (initialRoute == null) {
+            selectedTab = AppTab.Library
+            selectedLibraryItemId = null
+            selectedLibraryItemDetailState = ItemDetailState.Loading
+            selectedLibraryItemDetailReloadKey++
+            selectedChapterId = null
+            selectedChapterStartSeconds = null
+            appliedLaunchEventId = launchEventId
+            return@LaunchedEffect
+        }
+
+        val launchSelection = appLaunchSelectionForRoute(initialRoute) ?: return@LaunchedEffect
 
         selectedTab = launchSelection.tab
         selectedLibraryItemId = launchSelection.itemId
@@ -547,8 +564,7 @@ fun ShelfPlayerApp(initialRoute: AppRoute? = null) {
         selectedLibraryItemDetailReloadKey++
         selectedChapterId = null
         selectedChapterStartSeconds = null
-        pendingLaunchSelection = null
-        hasAppliedInitialRoute = true
+        appliedLaunchEventId = launchEventId
     }
 
     val selectedChapterLabel = (selectedLibraryItemDetailState as? ItemDetailState.Loaded)

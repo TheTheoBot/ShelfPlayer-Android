@@ -395,3 +395,16 @@
   - Validation changes were reviewed with the spec and code quality gate; one URL parsing edge case was fixed before completion.
 - Commit(s): `8a933b6` — feat: harden connection onboarding URL validation
 - Next step: Update the GitHub story issue with the commit hash and CI links/status, then continue with the next MVP slice.
+
+## 2026-05-08T06:23:55Z
+- Story/Issue: #8 — Story: Internal route foundation for item detail and player
+- Micro-task 1: Added runtime deep-link update handling so `onNewIntent()` can reopen `item/{itemId}` and `player` routes while the app is already running, and marked `MainActivity` as `singleTask` so existing-instance intent delivery is reliable; launcher intents without a deep link now reset the app back to the default Library landing state.
+- Micro-task 2: Added regression coverage for route key generation and runtime route-update application rules.
+- Micro-task 3: Added this run’s implementation-log entry for the current MVP slice.
+- Verification:
+  - `git diff --check` ✅
+  - Local Gradle execution remains blocked here because `java` is not installed in this environment.
+  - Independent spec review: PASS
+  - Independent code quality review: PASS
+- Commit(s): pending
+- Next step: Commit, push, and post the GitHub issue comment with the commit hash and CI run link once GitHub Actions finishes.
