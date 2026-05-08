@@ -370,7 +370,12 @@
 - Added focused regression coverage for whitespace/leading-slash normalization, percent-decoded item ids, and malformed route rejection.
 - Verification:
 - `git diff --check` ✅
-- `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
+- `java -version` → `command not found`
+- `./gradlew testDebugUnitTest` could not run locally because Java is not installed in this environment.
+- GitHub Actions run `25537328521` (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25537328521
+- GitHub Actions run `25537328515` (Android Debug Build) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25537328515
+- GitHub Actions run `25537328549` (Android APK) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25537328549
+- GitHub Actions run `25537328537` (Android Unit Tests) — failure: duplicate test-function overloads in `LibraryRepositoryTest.kt` (pre-existing baseline blocker)
 - Commit(s): `a90d613` — feat: harden internal route parsing
 - Next step:
-- Commit the log update, then keep monitoring Story #8 in CI without changing GitHub issues yet.
+- Commit the CI result update, then update the GitHub issue comment with the commit hash and CI links/status.
