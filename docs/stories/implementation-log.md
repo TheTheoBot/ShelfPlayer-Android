@@ -578,3 +578,13 @@
 |  - Independent code quality review: APPROVED
 |- Commit(s): `6d7c783` — feat: centralize player chapter context gating
 |- Next step: Commit, push, and post the GitHub issue comment with the final commit hash and CI run link/status once GitHub Actions finishes.
+
+## 2026-05-08T18:31:03Z
+|- Story/Issue: #12 — Story: Active chapter context follows the playback item
+|- Micro-task 4: Fixed the nullable chapter-detail compile error by making the player-selected chapter label lookup null-safe in `ItemDetailModels.kt`.
+|- Verification:
+|  - `git diff --check` ✅
+|  - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
+|  - The first GitHub Actions build failed on `ItemDetailModels.kt:110` with a nullable-receiver compile error; this follow-up commit addresses that regression.
+|- Commit(s): `0ea63e1` — fix: handle nullable playback chapter detail
+|- Next step: Push the fix, re-run GitHub Actions, and update Story #12 with the final commit hashes and CI run link/status.
