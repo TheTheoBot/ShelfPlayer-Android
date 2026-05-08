@@ -5,6 +5,12 @@ internal data class AppLaunchSelection(
     val itemId: String? = null,
 )
 
+internal data class AppLaunchState(
+    val route: AppRoute?,
+    val eventId: Int,
+    val isDeepLink: Boolean,
+)
+
 internal fun appLaunchSelectionForRoute(route: AppRoute?): AppLaunchSelection? {
     return when (route) {
         is AppRoute.ItemDetail -> AppLaunchSelection(
@@ -16,11 +22,43 @@ internal fun appLaunchSelectionForRoute(route: AppRoute?): AppLaunchSelection? {
     }
 }
 
-internal fun shouldApplyAppLaunchEvent(
-    appliedLaunchEventId: Int,
-    launchEventId: Int,
+internal fun appLaunchStateForInitialIntent(
+    route: AppRoute?,
+    isDeepLink: Boolean,
+): AppLaunchState {
+    val eventId = if (route == null) 0 else 1
+    return AppLaunchState(
+        route = route,
+        eventId = eventId,
+        isDeepLink = isDeepLink,
+    )
+}
+
+internal fun appLaunchStateForNextIntent(
+    previousState: AppLaunchState,
+    route: AppRoute?,
+    isDeepLink: Boolean,
+): AppLaunchState {
+    return AppLaunchState(
+        route = route,
+        eventId = previousState.eventId + 1,
+        isDeepLink = isDeepLink,
+    )
+}
+
+internal fun shouldApplyAppLaunchSelection(
+    selectedTab: AppTab,
+    selectedLibraryItemId: String?,
+    launchSelection: AppLaunchSelection,
 ): Boolean {
-    return launchEventId != appliedLaunchEventId
+    return selectedTab != launchSelection.tab || selectedLibraryItemId != launchSelection.itemId
+}
+
+internal fun shouldResetToDefaultLibraryState(
+    selectedTab: AppTab,
+    selectedLibraryItemId: String?,
+): Boolean {
+    return selectedTab != AppTab.Library || selectedLibraryItemId != null
 }
 
 internal fun shouldIgnoreDeepLinkLaunch(

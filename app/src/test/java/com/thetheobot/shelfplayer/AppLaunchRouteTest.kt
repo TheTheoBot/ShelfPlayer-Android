@@ -27,14 +27,59 @@ class AppLaunchRouteTest {
     }
 
     @Test
-    fun `runtime route updates apply for distinct launch events`() {
-        assertTrue(shouldApplyAppLaunchEvent(-1, 1))
-        assertTrue(shouldApplyAppLaunchEvent(1, 2))
+    fun `initial launch state starts from event id one for deep links and zero for launcher starts`() {
+        assertEquals(
+            AppLaunchState(route = AppRoute.Player, eventId = 1, isDeepLink = true),
+            appLaunchStateForInitialIntent(
+                route = AppRoute.Player,
+                isDeepLink = true,
+            ),
+        )
+        assertEquals(
+            AppLaunchState(route = null, eventId = 0, isDeepLink = false),
+            appLaunchStateForInitialIntent(
+                route = null,
+                isDeepLink = false,
+            ),
+        )
     }
 
     @Test
-    fun `runtime route updates ignore duplicate launch events`() {
-        assertFalse(shouldApplyAppLaunchEvent(2, 2))
+    fun `next launch state increments the event id and keeps the latest route metadata`() {
+        val initialState = AppLaunchState(route = AppRoute.Player, eventId = 1, isDeepLink = true)
+        assertEquals(
+            AppLaunchState(route = AppRoute.ItemDetail(itemId = "abc123"), eventId = 2, isDeepLink = false),
+            appLaunchStateForNextIntent(
+                previousState = initialState,
+                route = AppRoute.ItemDetail(itemId = "abc123"),
+                isDeepLink = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `runtime route selection applies only when the visible route changes`() {
+        assertTrue(
+            shouldApplyAppLaunchSelection(
+                selectedTab = AppTab.Library,
+                selectedLibraryItemId = null,
+                launchSelection = AppLaunchSelection(tab = AppTab.Player),
+            ),
+        )
+        assertFalse(
+            shouldApplyAppLaunchSelection(
+                selectedTab = AppTab.Library,
+                selectedLibraryItemId = "abc123",
+                launchSelection = AppLaunchSelection(tab = AppTab.Library, itemId = "abc123"),
+            ),
+        )
+    }
+
+    @Test
+    fun `default library reset only runs when the visible route changed away from the root`() {
+        assertTrue(shouldResetToDefaultLibraryState(AppTab.Player, null))
+        assertTrue(shouldResetToDefaultLibraryState(AppTab.Library, "abc123"))
+        assertFalse(shouldResetToDefaultLibraryState(AppTab.Library, null))
     }
 
     @Test
