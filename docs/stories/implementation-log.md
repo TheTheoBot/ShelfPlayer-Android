@@ -372,8 +372,15 @@
 - Verification:
 - `git diff --check` ✅
 - Local Gradle unit test execution was not available yet in this environment because Java is not installed.
+- GitHub Actions run `25580709763` (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25580709763
+- GitHub Actions run `25580709759` (Android Debug Build) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25580709759
+- GitHub Actions run `25580709757` (Android APK) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25580709757
+- GitHub Actions run `25580709756` (Android Unit Tests) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25580709756
+- Commit(s): `0df749f` — feat: clarify item detail and player status copy
+- GitHub issue: https://github.com/TheTheoBot/ShelfPlayer-Android/issues/13
+- GitHub issue comment: https://github.com/TheTheoBot/ShelfPlayer-Android/issues/13#issuecomment-4410094046
 - Next step:
-- Run the focused Android unit test task in CI, then continue with any follow-up player UX polish only if the new status copy needs refinement.
+- Move to the next MVP slice only if fresh CI feedback suggests further player or detail refinement; otherwise continue with the next planned UX target.
 
 ## 2026-05-08T04:41:54Z
 - Story/Issue: #8 — Story: Internal route foundation for item detail and player
