@@ -36,6 +36,12 @@ internal fun settingsConnectShortcutButtonLabel(session: ConnectionSession): Str
     }
 }
 
+internal fun settingsPlaybackSummaryText(settings: AppSettings): String {
+    return "Sprung ${formatSkipInterval(settings.playbackSkipIntervalSeconds)} · " +
+        "Rate ${formatPlaybackRate(settings.defaultPlaybackRate)} · " +
+        "Darstellung ${themeModeButtonLabel(settings.themeMode)}"
+}
+
 @Composable
 fun SettingsScreen(
     padding: PaddingValues,
@@ -61,6 +67,11 @@ fun SettingsScreen(
         Text(
             "Diese Werte werden für neue Wiedergaben und die Player-Steuerung verwendet.",
             style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            settingsPlaybackSummaryText(settings),
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 

@@ -21,9 +21,9 @@ internal fun shouldUseDarkTheme(themeMode: ThemeMode, systemDarkTheme: Boolean):
 
 internal fun themeModeButtonLabel(themeMode: ThemeMode): String {
     return when (themeMode) {
-        ThemeMode.SYSTEM -> "SYSTEM"
-        ThemeMode.LIGHT -> "LIGHT"
-        ThemeMode.DARK -> "DARK"
+        ThemeMode.SYSTEM -> "System"
+        ThemeMode.LIGHT -> "Hell"
+        ThemeMode.DARK -> "Dunkel"
     }
 }
 

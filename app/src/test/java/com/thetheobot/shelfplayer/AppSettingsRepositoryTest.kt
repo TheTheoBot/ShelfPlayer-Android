@@ -120,9 +120,9 @@ class AppSettingsRepositoryTest {
     }
 
     @Test
-    fun `theme mode button labels stay concise and uppercase`() {
-        assertEquals("SYSTEM", themeModeButtonLabel(ThemeMode.SYSTEM))
-        assertEquals("LIGHT", themeModeButtonLabel(ThemeMode.LIGHT))
-        assertEquals("DARK", themeModeButtonLabel(ThemeMode.DARK))
+    fun `theme mode button labels stay concise and localized`() {
+        assertEquals("System", themeModeButtonLabel(ThemeMode.SYSTEM))
+        assertEquals("Hell", themeModeButtonLabel(ThemeMode.LIGHT))
+        assertEquals("Dunkel", themeModeButtonLabel(ThemeMode.DARK))
     }
 }

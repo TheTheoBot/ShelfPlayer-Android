@@ -39,4 +39,22 @@ class SettingsScreenTest {
             ),
         )
     }
+
+    @Test
+    fun `settings playback summary text reflects the current defaults and theme`() {
+        assertEquals(
+            "Sprung 15s · Rate 1.0x · Darstellung System",
+            settingsPlaybackSummaryText(AppSettings()),
+        )
+        assertEquals(
+            "Sprung 30s · Rate 1.25x · Darstellung Dunkel",
+            settingsPlaybackSummaryText(
+                AppSettings(
+                    playbackSkipIntervalSeconds = 30,
+                    defaultPlaybackRate = 1.25f,
+                    themeMode = ThemeMode.DARK,
+                ),
+            ),
+        )
+    }
 }
