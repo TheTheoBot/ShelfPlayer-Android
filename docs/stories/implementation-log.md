@@ -284,3 +284,20 @@
 - `23e03d7` — fix: compile search clear helper branches
 - Next step:
 - Commit and push the test + log update, then post the commit hash and GitHub Actions run link back onto Story #6.
+
+## 2026-05-08T01:16:54Z
+- Story/Issue: #6 — Story: Search within active library and navigate to detail
+- Implemented:
+- Added a shared library item metadata helper and reused it across the Library and Search screens to remove repeated item-type/progress formatting.
+- Added a search-result navigation regression test that verifies the Details button forwards the selected item id to the callback.
+- Verification:
+- `git diff --check` ✅
+- Independent spec review: PASS
+- Independent code quality review: APPROVED
+- Independent spec review (test task): PASS
+- Independent code quality review (test task): APPROVED
+- Local Gradle execution is blocked here because `java` is not installed in this environment.
+- Commit(s):
+- `9a89b96` — feat: deduplicate library item metadata
+- Next step:
+- Push to GitHub, update Story #6 with the commit hash and CI run link, and continue polishing search UX if CI stays green.
