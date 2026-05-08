@@ -297,7 +297,10 @@
 - Independent spec review (test task): PASS
 - Independent code quality review (test task): APPROVED
 - Local Gradle execution is blocked here because `java` is not installed in this environment.
+- GitHub Actions run `25531162868` (main Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25531162868
+- GitHub issue comment: https://github.com/TheTheoBot/ShelfPlayer-Android/issues/6#issuecomment-4402507977
 - Commit(s):
 - `9a89b96` — feat: deduplicate library item metadata
+- `afa6061` — docs: log search metadata refactor
 - Next step:
-- Push to GitHub, update Story #6 with the commit hash and CI run link, and continue polishing search UX if CI stays green.
+- Continue polishing search UX only if future CI signals a regression; otherwise move to the next MVP slice.
