@@ -70,6 +70,10 @@ internal enum class AppTab(val label: String) {
     Settings("Settings"),
 }
 
+internal fun bottomNavigationTabs(): List<AppTab> {
+    return AppTab.entries.filterNot { it == AppTab.Connect }
+}
+
 internal fun playbackActionLabel(
     playbackActiveItemId: String?,
     itemId: String,
@@ -739,36 +743,21 @@ internal fun ShelfPlayerApp(
                     },
                     bottomBar = {
                         NavigationBar {
-                            NavigationBarItem(
-                                selected = selectedTab == AppTab.Library,
-                                onClick = { selectedTab = AppTab.Library },
-                                icon = { Icon(Icons.Rounded.Headphones, contentDescription = null) },
-                                label = { Text(AppTab.Library.label) },
-                            )
-                            NavigationBarItem(
-                                selected = selectedTab == AppTab.Search,
-                                onClick = { selectedTab = AppTab.Search },
-                                icon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                                label = { Text(AppTab.Search.label) },
-                            )
-                            NavigationBarItem(
-                                selected = selectedTab == AppTab.Connect,
-                                onClick = { selectedTab = AppTab.Connect },
-                                icon = { Icon(Icons.Rounded.Link, contentDescription = null) },
-                                label = { Text(AppTab.Connect.label) },
-                            )
-                            NavigationBarItem(
-                                selected = selectedTab == AppTab.Player,
-                                onClick = { selectedTab = AppTab.Player },
-                                icon = { Icon(Icons.Rounded.PlayArrow, contentDescription = null) },
-                                label = { Text(AppTab.Player.label) },
-                            )
-                            NavigationBarItem(
-                                selected = selectedTab == AppTab.Settings,
-                                onClick = { selectedTab = AppTab.Settings },
-                                icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                                label = { Text(AppTab.Settings.label) },
-                            )
+                            bottomNavigationTabs().forEach { tab ->
+                                val icon = when (tab) {
+                                    AppTab.Library -> Icons.Rounded.Headphones
+                                    AppTab.Search -> Icons.Rounded.Search
+                                    AppTab.Player -> Icons.Rounded.PlayArrow
+                                    AppTab.Settings -> Icons.Rounded.Settings
+                                    AppTab.Connect -> Icons.Rounded.Link
+                                }
+                                NavigationBarItem(
+                                    selected = selectedTab == tab,
+                                    onClick = { selectedTab = tab },
+                                    icon = { Icon(icon, contentDescription = null) },
+                                    label = { Text(tab.label) },
+                                )
+                            }
                         }
                     }
                 ) { padding ->

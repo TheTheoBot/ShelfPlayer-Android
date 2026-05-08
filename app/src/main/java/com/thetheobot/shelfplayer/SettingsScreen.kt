@@ -38,7 +38,7 @@ internal fun formatSkipInterval(seconds: Int): String = "${seconds}s"
 
 internal fun settingsConnectShortcutButtonLabel(session: ConnectionSession): String {
     return if (session.hasSavedServer) {
-        "Connect öffnen"
+        "Verbindung verwalten"
     } else {
         "Verbindung einrichten"
     }

@@ -34,7 +34,7 @@ class SettingsScreenTest {
             ),
         )
         assertEquals(
-            "Connect öffnen",
+            "Verbindung verwalten",
             settingsConnectShortcutButtonLabel(
                 ConnectionSession(
                     ConnectionCredentials(
