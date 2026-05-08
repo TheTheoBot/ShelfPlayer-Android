@@ -546,3 +546,19 @@
 - CI: GitHub Actions run `25563683528` (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25563683528
 - Next step:
 - Keep iterating on the next MVP slice while preserving the bottom-nav cleanup and connection shortcut behavior.
+
+## 2026-05-08T16:27:47Z
+- Story/Issue: #12 — Story: Active chapter context follows the playback item
+- Implemented:
+- Added a pure chapter-resolution helper and regression coverage for active chapter lookup at playback positions.
+- Surfaced the active chapter context in the Player tab, highlighted the active quick-access chapter, and gated chapter controls so they only use the currently active playback item.
+- Reset stale playback/detail state when changing connections and when closing item detail so Player no longer reuses chapter data from the wrong item.
+- Verification:
+- `git diff --check` ✅
+- Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
+- Local Android Gradle execution is blocked here because Java is not installed in this environment.
+- Independent spec review: PASS
+- Independent code quality review: APPROVED
+- Commit(s): `a22c45b` — feat: refine player chapter context
+- Next step:
+- Commit the docs/log follow-up, push it to main, watch the GitHub Actions run, and add the final commit hash plus CI link/status back onto Story #12.
