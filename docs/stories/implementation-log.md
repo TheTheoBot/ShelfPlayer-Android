@@ -408,3 +408,21 @@
   - Independent code quality review: PASS
 - Commit(s): pending
 - Next step: Commit, push, and post the GitHub issue comment with the commit hash and CI run link once GitHub Actions finishes.
+
+## 2026-05-08T07:32:43Z
+- Story/Issue: #8 — Story: Internal route foundation for item detail and player
+- Micro-task 1: Routed `MainActivity` through a single `AppLaunchState` flow so initial launches and `onNewIntent()` updates share the same route/deep-link state, and extracted small intent helpers to avoid duplicated parsing.
+- Micro-task 2: Refined `ShelfPlayerApp` to consume the launch state directly, resetting to the default Library root only when needed and reapplying item/player routes only when the visible destination changes.
+- Micro-task 3: Expanded regression coverage for launch-state initialization, next-intent event ordering, visible-route selection, and launcher reset behavior.
+- Verification:
+  - `git diff --check` ✅
+  - `java -version` → `command not found`
+  - Local Gradle execution remains blocked here because Java is not installed in this environment.
+  - Independent spec review: PASS
+  - Independent code quality review: PASS
+  - GitHub Actions run `25543341457` (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25543341457
+  - GitHub Actions run `25543341420` (Android Debug Build) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25543341420
+  - GitHub Actions run `25543341395` (Android APK) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25543341395
+  - GitHub Actions run `25543341419` (Android Unit Tests) — failure: pre-existing duplicate test-function overloads in `LibraryRepositoryTest.kt`
+- Commit(s): `4e859dc` — feat: handle runtime launch re-entry; `cceb8cd` — fix: restore build for launch re-entry
+- Next step: Update Issue #8 with the commit hash and CI run link/status, then commit this log update.
