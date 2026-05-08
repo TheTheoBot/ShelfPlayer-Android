@@ -351,6 +351,15 @@ internal fun ShelfPlayerApp(
         playbackError = null
     }
 
+    fun resetSelectedLibraryItemDetail() {
+        val resetState = defaultItemDetailResetState()
+        selectedTab = resetState.selectedTab
+        selectedLibraryItemDetailState = resetState.selectedLibraryItemDetailState
+        selectedLibraryItemId = resetState.selectedLibraryItemId
+        selectedChapterId = resetState.selectedChapterId
+        selectedChapterStartSeconds = resetState.selectedChapterStartSeconds
+    }
+
     fun flushPlaybackProgressOnDispose() {
         val activeItemId = playbackActiveItemId
         if (activeItemId != null && playbackDurationMs > 0) {
@@ -750,11 +759,7 @@ internal fun ShelfPlayerApp(
                 BackHandler(enabled = backNavigation != AppBackNavigation.Unhandled) {
                     when (backNavigation) {
                         AppBackNavigation.CloseItemDetail -> {
-                            selectedTab = AppTab.Library
-                            selectedLibraryItemDetailState = ItemDetailState.Loading
-                            selectedLibraryItemId = null
-                            selectedChapterId = null
-                            selectedChapterStartSeconds = null
+                            resetSelectedLibraryItemDetail()
                         }
 
                         AppBackNavigation.SwitchToLibrary -> {
@@ -817,10 +822,7 @@ internal fun ShelfPlayerApp(
                                     playbackActionLabel = playbackActionLabelFor(currentItemId),
                                     playbackActionEnabled = playbackActionEnabledFor(currentItemId),
                                     onBackClick = {
-                                        selectedLibraryItemDetailState = ItemDetailState.Loading
-                                        selectedLibraryItemId = null
-                                        selectedChapterId = null
-                                        selectedChapterStartSeconds = null
+                                        resetSelectedLibraryItemDetail()
                                     },
                                     onPlaybackAction = {
                                         selectedTab = AppTab.Player

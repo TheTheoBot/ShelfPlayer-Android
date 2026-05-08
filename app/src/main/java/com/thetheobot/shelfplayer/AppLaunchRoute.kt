@@ -84,3 +84,15 @@ internal fun shouldIgnoreDeepLinkLaunch(
 ): Boolean {
     return launchIntentIsDeepLink && initialRoute == null
 }
+
+internal data class ItemDetailResetState(
+    val selectedTab: AppTab = AppTab.Library,
+    val selectedLibraryItemDetailState: ItemDetailState = ItemDetailState.Loading,
+    val selectedLibraryItemId: String? = null,
+    val selectedChapterId: String? = null,
+    val selectedChapterStartSeconds: Int? = null,
+)
+
+internal fun defaultItemDetailResetState(): ItemDetailResetState {
+    return ItemDetailResetState()
+}

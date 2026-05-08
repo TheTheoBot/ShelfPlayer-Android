@@ -599,3 +599,14 @@
   - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
   - `./gradlew testDebugUnitTest --tests com.thetheobot.shelfplayer.ItemDetailModelsTest` could not run locally because Java is not installed in this environment (`java: not found`)
 - Next step: Push the slice, rerun Android CI, and capture the final commit hash plus Actions run link/status for Story #12.
+
+## 2026-05-08T19:56:47Z
+- Story/Issue: #9 — Story: Deterministic back navigation for Library, Detail, and Player
+- Micro-task 1: Extracted a shared `defaultItemDetailResetState()` helper so the BackHandler and item-detail back button now reuse the same library-root reset path.
+- Micro-task 2: Added a JVM regression test that locks in the reset helper defaults: Library tab, loading detail state, and cleared item/chapter selection.
+- Micro-task 3: Recorded this run in the implementation log so Story #9 stays documented in-repo.
+- Verification:
+  - `git diff --check` ✅
+  - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
+  - `./gradlew testDebugUnitTest` could not run locally because Java is not installed in this environment (`java: not found`)
+- Next step: Push the slice and let GitHub Actions perform full build/test verification.

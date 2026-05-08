@@ -123,6 +123,14 @@ class AppLaunchRouteTest {
     }
 
     @Test
+    fun `default item detail reset returns to the library root with loading detail state`() {
+        assertEquals(
+            ItemDetailResetState(),
+            defaultItemDetailResetState(),
+        )
+    }
+
+    @Test
     fun `null route does not request a special launch destination`() {
         assertNull(appLaunchSelectionForRoute(null))
     }
