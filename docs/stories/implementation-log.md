@@ -305,6 +305,25 @@
 - Next step:
 - Continue polishing search UX only if future CI signals a regression; otherwise move to the next MVP slice.
 
+## 2026-05-08T02:54:33Z
+- Story/Issue: #7 — Story: Connection status shortcut in settings
+- Implemented:
+- Added a connection status card to the Settings screen that reuses the existing connection-session summary helper.
+- Added a Settings → Connect shortcut so users can jump straight to the connection tab from settings.
+- Added a small pure helper for the shortcut button label and regression coverage for saved vs. unsaved connection states.
+- Added precedence coverage for the app-root connection state resolver so loading and fatal-error ordering stays explicit.
+- Verification:
+- `git diff --check` ✅
+- Static diff scan: no secrets / shell injection / eval / pickle / SQL injection matches
+- Local Android Gradle execution is still blocked here because `java` is not installed in this environment.
+- Independent spec review: PASS
+- Independent code quality review: APPROVED
+- GitHub issue: https://github.com/TheTheoBot/ShelfPlayer-Android/issues/7
+- Commit(s):
+- `13ec50b` — feat: add settings connection shortcut
+- Next step:
+- Push the settings slice, then add the GitHub issue comment with the final commit hash and CI run link for Story #7.
+
 ## 2026-05-08T02:01:21Z
 - Story/Issue: #4 — Story: Player progress sync and resume
 - Implemented:

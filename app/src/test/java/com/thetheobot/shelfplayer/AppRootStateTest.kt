@@ -1,6 +1,7 @@
 package com.thetheobot.shelfplayer
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -14,6 +15,24 @@ class AppRootStateTest {
                 connectionInitFailed = false,
                 connectionLoadFailed = false,
                 connectionSession = ConnectionSession(),
+            ),
+        )
+    }
+
+    @Test
+    fun `resolveAppRootState keeps loading precedence over downstream failure flags`() {
+        assertEquals(
+            AppRootState.Loading,
+            resolveAppRootState(
+                connectionStoreReady = false,
+                connectionInitFailed = true,
+                connectionLoadFailed = true,
+                connectionSession = ConnectionSession(
+                    ConnectionCredentials(
+                        serverUrl = "https://books.example.com",
+                        accessToken = "token-123",
+                    ),
+                ),
             ),
         )
     }
@@ -76,14 +95,55 @@ class AppRootStateTest {
     }
 
     @Test
+    fun `resolveAppRootState returns fatal error before load error when both failure flags are set`() {
+        assertEquals(
+            AppRootState.FatalError,
+            resolveAppRootState(
+                connectionStoreReady = true,
+                connectionInitFailed = true,
+                connectionLoadFailed = true,
+                connectionSession = ConnectionSession(
+                    ConnectionCredentials(
+                        serverUrl = "https://books.example.com",
+                        accessToken = "token-123",
+                    ),
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `connection session shows empty status when no server is saved`() {
+        assertEquals(
+            "Noch kein Server gespeichert",
+            connectionSessionStatusText(ConnectionSession()),
+        )
+    }
+
+    @Test
+    fun `connection session shows remembered server status when a server is saved`() {
+        assertEquals(
+            "Gespeicherter Server: https://books.example.com",
+            connectionSessionStatusText(
+                ConnectionSession(
+                    ConnectionCredentials(
+                        serverUrl = "https://books.example.com",
+                        accessToken = "token-123",
+                    ),
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun `connection session starts onboarding without a saved server`() {
         assertTrue(ConnectionSession().shouldShowOnboarding())
     }
 
     @Test
     fun `connection session skips onboarding when a server is remembered`() {
-        assertTrue(
-            !ConnectionSession(
+        assertFalse(
+            ConnectionSession(
                 ConnectionCredentials(
                     serverUrl = "https://books.example.com",
                     accessToken = "token-123",

@@ -844,6 +844,8 @@ fun ShelfPlayerApp() {
                         AppTab.Settings -> SettingsScreen(
                             padding = padding,
                             appSettingsRepository = appSettingsRepository,
+                            connectionSession = connectionSession,
+                            onOpenConnectTab = { selectedTab = AppTab.Connect },
                         )
                     }
                 }

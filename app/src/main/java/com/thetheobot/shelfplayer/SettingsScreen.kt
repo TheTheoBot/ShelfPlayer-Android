@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -29,10 +28,20 @@ private val themeModeOptions = listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMo
 
 internal fun formatSkipInterval(seconds: Int): String = "${seconds}s"
 
+internal fun settingsConnectShortcutButtonLabel(session: ConnectionSession): String {
+    return if (session.hasSavedServer) {
+        "Connect öffnen"
+    } else {
+        "Verbindung einrichten"
+    }
+}
+
 @Composable
 fun SettingsScreen(
     padding: PaddingValues,
     appSettingsRepository: AppSettingsRepository,
+    connectionSession: ConnectionSession,
+    onOpenConnectTab: () -> Unit,
 ) {
     val settings by appSettingsRepository.settings.collectAsState()
 
@@ -54,6 +63,23 @@ fun SettingsScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        Card(colors = CardDefaults.elevatedCardColors()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("Verbindung", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    connectionSessionStatusText(connectionSession),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Button(onClick = onOpenConnectTab) {
+                    Text(settingsConnectShortcutButtonLabel(connectionSession))
+                }
+            }
+        }
 
         Card(colors = CardDefaults.elevatedCardColors()) {
             Column(
