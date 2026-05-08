@@ -1,5 +1,6 @@
 package com.thetheobot.shelfplayer
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -697,6 +698,24 @@ internal fun ShelfPlayerApp(
             }
 
             AppRootState.Ready -> {
+                val backNavigation = resolveAppBackNavigation(selectedTab, selectedLibraryItemId)
+                BackHandler(enabled = backNavigation != AppBackNavigation.Unhandled) {
+                    when (backNavigation) {
+                        AppBackNavigation.CloseItemDetail -> {
+                            selectedTab = AppTab.Library
+                            selectedLibraryItemId = null
+                            selectedChapterId = null
+                            selectedChapterStartSeconds = null
+                        }
+
+                        AppBackNavigation.SwitchToLibrary -> {
+                            selectedTab = AppTab.Library
+                        }
+
+                        AppBackNavigation.Unhandled -> Unit
+                    }
+                }
+
                 Scaffold(
                     topBar = {
                         CenterAlignedTopAppBar(

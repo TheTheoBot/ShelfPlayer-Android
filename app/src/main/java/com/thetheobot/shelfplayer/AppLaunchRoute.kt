@@ -11,6 +11,23 @@ internal data class AppLaunchState(
     val isDeepLink: Boolean,
 )
 
+internal enum class AppBackNavigation {
+    CloseItemDetail,
+    SwitchToLibrary,
+    Unhandled,
+}
+
+internal fun resolveAppBackNavigation(
+    selectedTab: AppTab,
+    selectedLibraryItemId: String?,
+): AppBackNavigation {
+    return when {
+        selectedLibraryItemId != null -> AppBackNavigation.CloseItemDetail
+        selectedTab != AppTab.Library -> AppBackNavigation.SwitchToLibrary
+        else -> AppBackNavigation.Unhandled
+    }
+}
+
 internal fun appLaunchSelectionForRoute(route: AppRoute?): AppLaunchSelection? {
     return when (route) {
         is AppRoute.ItemDetail -> AppLaunchSelection(

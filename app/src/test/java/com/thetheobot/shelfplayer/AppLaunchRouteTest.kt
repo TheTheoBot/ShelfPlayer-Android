@@ -90,6 +90,39 @@ class AppLaunchRouteTest {
     }
 
     @Test
+    fun `back navigation closes an open item detail before changing tabs`() {
+        assertEquals(
+            AppBackNavigation.CloseItemDetail,
+            resolveAppBackNavigation(
+                selectedTab = AppTab.Player,
+                selectedLibraryItemId = "abc123",
+            ),
+        )
+    }
+
+    @Test
+    fun `back navigation switches to library when another tab is active`() {
+        assertEquals(
+            AppBackNavigation.SwitchToLibrary,
+            resolveAppBackNavigation(
+                selectedTab = AppTab.Settings,
+                selectedLibraryItemId = null,
+            ),
+        )
+    }
+
+    @Test
+    fun `back navigation is unhandled at the library root`() {
+        assertEquals(
+            AppBackNavigation.Unhandled,
+            resolveAppBackNavigation(
+                selectedTab = AppTab.Library,
+                selectedLibraryItemId = null,
+            ),
+        )
+    }
+
+    @Test
     fun `null route does not request a special launch destination`() {
         assertNull(appLaunchSelectionForRoute(null))
     }

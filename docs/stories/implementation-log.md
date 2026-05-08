@@ -462,13 +462,27 @@
 - Next step:
 - Continue with the next MVP slice after this route-hardening run is recorded.
 ## 2026-05-08T11:30:44Z
-- Story/Issue: #7 — Story: Connection status shortcut in settings
-- Implemented:
-- Hardened the shared connection-session helper so whitespace-only stored server URLs now count as empty and displayed server URLs are trimmed/legacy-normalized before rendering.
-- Added regression coverage for whitespace-only server values in the app-root state helper path and trailing-slash normalization in the settings shortcut/status helpers.
-- Verification:
-- `git diff --check` ✅
-- `./gradlew testDebugUnitTest --tests com.thetheobot.shelfplayer.SettingsScreenTest --tests com.thetheobot.shelfplayer.AppRootStateTest --tests com.thetheobot.shelfplayer.ConnectionValidationTest` could not run locally because `java` is not installed in this environment.
-- Commit(s): pending
-- Next step:
-- Commit this slice, push it, and update Story #7 with the commit hash and CI result link.
+|- Story/Issue: #7 — Story: Connection status shortcut in settings
+|- Implemented:
+|- Hardened the shared connection-session helper so whitespace-only stored server URLs now count as empty and displayed server URLs are trimmed/legacy-normalized before rendering.
+|- Added regression coverage for whitespace-only server values in the app-root state helper path and trailing-slash normalization in the settings shortcut/status helpers.
+|- Verification:
+|- `git diff --check` ✅
+|- `./gradlew testDebugUnitTest --tests com.thetheobot.shelfplayer.SettingsScreenTest --tests com.thetheobot.shelfplayer.AppRootStateTest --tests com.thetheobot.shelfplayer.ConnectionValidationTest` could not run locally because `java` is not installed in this environment.
+|- Commit(s): pending
+|- Next step: Commit this slice, push it, and update Story #7 with the commit hash and CI result link.
+
+## 2026-05-08T12:18:18Z
+|- Story/Issue: #9 — Story: Deterministic back navigation for Library, Detail, and Player
+|- Implemented:
+|- Added a pure `resolveAppBackNavigation` helper that distinguishes between closing an open item detail, switching back to Library, and leaving Library root unhandled.
+|- Wired Compose `BackHandler` into `ShelfPlayerApp` so item detail closes before tab switching, and non-Library tabs return to Library instead of exiting the app.
+|- Added unit tests for the back-navigation helper to cover item-detail close, tab վերադարձ to Library, and Library-root no-op behavior.
+|- Verification:
+|- `git diff --check` ✅
+|- Static diff scan: no secrets / shell injection / eval / pickle / SQL injection matches
+|- Local Android Gradle execution is blocked here because `java` is not installed in this environment.
+|- Independent spec review: PASS
+|- Independent code quality review: APPROVED
+|- Commit(s): pending
+|- Next step: Commit and push this navigation slice, then add the GitHub issue comment with the commit hash and CI run link once GitHub Actions finishes.
