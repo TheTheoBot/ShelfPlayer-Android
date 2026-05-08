@@ -437,6 +437,6 @@
 - Verification:
 - `git diff --check` ✅
 - Local Gradle execution is blocked here because `java` is not installed in this environment.
-- Commit(s): pending
+- Commit(s): `0cb6cd6` — feat: polish player progress resume
 - Next step:
-- Commit and push the player/progress polish slice, then update Story #4 with the commit hash and CI run link once GitHub Actions finishes.
+- Push the player/progress polish slice, then update Story #4 with the commit hash and CI run link once GitHub Actions finishes.
