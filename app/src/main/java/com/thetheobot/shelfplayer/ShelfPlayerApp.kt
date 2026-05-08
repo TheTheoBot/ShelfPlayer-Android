@@ -61,7 +61,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.math.roundToInt
 import java.util.Locale
 
-private enum class AppTab(val label: String) {
+internal enum class AppTab(val label: String) {
     Library("Library"),
     Search("Search"),
     Connect("Connect"),
@@ -131,7 +131,7 @@ private const val playbackProgressSyncIntervalMs = 30_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShelfPlayerApp() {
+fun ShelfPlayerApp(initialRoute: AppRoute? = null) {
     val context = LocalContext.current.applicationContext
     var connectionStore by remember { mutableStateOf<ConnectionCredentialsStore?>(null) }
     var connectionStoreReady by remember { mutableStateOf(false) }
@@ -150,6 +150,8 @@ fun ShelfPlayerApp() {
     val appSettings by appSettingsRepository.settings.collectAsState()
     val libraryFeedState by libraryRepository.libraryFeedState.collectAsState()
     var selectedTab by rememberSaveable { mutableStateOf(AppTab.Library) }
+    var pendingLaunchSelection by remember { mutableStateOf(appLaunchSelectionForRoute(initialRoute)) }
+    var hasAppliedInitialRoute by rememberSaveable { mutableStateOf(false) }
     var connectionLoadFailed by remember { mutableStateOf(false) }
     var initializationAttempt by rememberSaveable { mutableStateOf(0) }
     var selectedLibraryItemId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -533,6 +535,21 @@ fun ShelfPlayerApp() {
         connectionLoadFailed = connectionLoadFailed,
         connectionSession = connectionSession,
     )
+
+    LaunchedEffect(rootState, pendingLaunchSelection, hasAppliedInitialRoute) {
+        if (rootState != AppRootState.Ready) return@LaunchedEffect
+        val launchSelection = pendingLaunchSelection ?: return@LaunchedEffect
+        if (hasAppliedInitialRoute) return@LaunchedEffect
+
+        selectedTab = launchSelection.tab
+        selectedLibraryItemId = launchSelection.itemId
+        selectedLibraryItemDetailState = ItemDetailState.Loading
+        selectedLibraryItemDetailReloadKey++
+        selectedChapterId = null
+        selectedChapterStartSeconds = null
+        pendingLaunchSelection = null
+        hasAppliedInitialRoute = true
+    }
 
     val selectedChapterLabel = (selectedLibraryItemDetailState as? ItemDetailState.Loaded)
         ?.detail
