@@ -562,5 +562,19 @@
   - GitHub Actions run `25569949096` (Android Debug Build) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25569949096
   - GitHub Actions run `25569949100` (Android APK) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25569949100
   - GitHub Actions run `25569949105` (Android Unit Tests) — failure: `ConnectionValidationTest` assertions around `validateServerUrl` (pre-existing blocker)
-- Commit(s): `584db99` — feat: refine active chapter playback context; `bbdbe77` — docs: log active chapter context run
-- Next step: Update Story #12 with the commit hash and CI run link/status, then continue with the next MVP slice once the blocking validation tests are addressed.
+|- Commit(s): `584db99` — feat: refine active chapter playback context; `bbdbe77` — docs: log active chapter context run
+|- Next step: Update Story #12 with the commit hash and CI run link/status, then continue with the next MVP slice once the blocking validation tests are addressed.
+
+## 2026-05-08T18:23:39Z
+|- Story/Issue: #12 — Story: Active chapter context follows the playback item
+|- Micro-task 1: Centralized player chapter-context gating in a pure helper so the Player tab now derives selected-chapter label/start seconds through one reusable path.
+|- Micro-task 2: Ran local verification checks available in this environment: `git diff --check` and an added-line security scan over the current diff.
+|- Micro-task 3: Recorded this run in the implementation log so the ongoing story slice stays documented in-repo.
+|- Verification:
+|  - `git diff --check` ✅
+|  - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
+|  - `./gradlew testDebugUnitTest --tests com.thetheobot.shelfplayer.ItemDetailModelsTest` could not run locally because Java is not installed in this environment (`java: not found`)
+|  - Independent spec review: PASS
+|  - Independent code quality review: APPROVED
+|- Commit(s): pending
+|- Next step: Commit, push, and post the GitHub issue comment with the final commit hash and CI run link/status once GitHub Actions finishes.

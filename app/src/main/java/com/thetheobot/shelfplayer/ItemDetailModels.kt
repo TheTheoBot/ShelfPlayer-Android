@@ -88,6 +88,35 @@ internal fun selectedChapterDisplayLabel(
     ).joinToString(" · ").ifBlank { "Ausgewähltes Kapitel" }
 }
 
+internal data class PlayerSelectedChapterContext(
+    val label: String?,
+    val startSeconds: Int?,
+)
+
+internal fun resolvePlayerSelectedChapterContext(
+    playbackActiveItemId: String?,
+    playbackLibraryItemDetail: LibraryItemDetail?,
+    selectedChapterId: String?,
+    selectedChapterStartSeconds: Int?,
+): PlayerSelectedChapterContext {
+    if (!isSelectedChapterContextActivePlaybackItem(
+            playbackActiveItemId = playbackActiveItemId,
+            selectedItemId = playbackLibraryItemDetail?.item?.id,
+        )
+    ) {
+        return PlayerSelectedChapterContext(label = null, startSeconds = null)
+    }
+
+    val selectedChapterLabel = playbackLibraryItemDetail.chapters.let { chapters ->
+        selectedChapterId?.let { chapterId -> selectedChapterDisplayLabel(chapters, chapterId) }
+    }
+
+    return PlayerSelectedChapterContext(
+        label = selectedChapterLabel,
+        startSeconds = selectedChapterStartSeconds,
+    )
+}
+
 internal fun activeChapterDisplayLabel(chapter: LibraryChapter?): String {
     val resolvedChapter = chapter ?: return "Kein Kapitel an dieser Position"
     val chapterRange = formatChapterRange(resolvedChapter.startSeconds, resolvedChapter.endSeconds)

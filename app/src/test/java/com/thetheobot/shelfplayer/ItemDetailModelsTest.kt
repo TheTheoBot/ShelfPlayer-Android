@@ -78,6 +78,66 @@ class ItemDetailModelsTest {
     }
 
     @Test
+    fun `selected chapter context resolves only for the active playback item`() {
+        val detail = LibraryItemDetail(
+            item = LibraryItem(
+                id = "abc123",
+                title = "Test Item",
+                author = "Author",
+                progressPercent = 10,
+                itemType = LibraryItemType.Podcast,
+            ),
+            progressPercent = 10,
+            chapters = listOf(
+                LibraryChapter(id = "chapter-1", title = "Chapter 1", startSeconds = 5, endSeconds = 15),
+            ),
+        )
+
+        val matchingContext = resolvePlayerSelectedChapterContext(
+            playbackActiveItemId = " abc123 ",
+            playbackLibraryItemDetail = detail,
+            selectedChapterId = "chapter-1",
+            selectedChapterStartSeconds = 5,
+        )
+        val mismatchingContext = resolvePlayerSelectedChapterContext(
+            playbackActiveItemId = "different-id",
+            playbackLibraryItemDetail = detail,
+            selectedChapterId = "chapter-1",
+            selectedChapterStartSeconds = 5,
+        )
+
+        assertEquals("Chapter 1 · 00:05 – 00:15", matchingContext.label)
+        assertEquals(Integer.valueOf(5), matchingContext.startSeconds)
+        assertNull(mismatchingContext.label)
+        assertNull(mismatchingContext.startSeconds)
+    }
+
+    @Test
+    fun `selected chapter context keeps the selected start time when the active item matches`() {
+        val detail = LibraryItemDetail(
+            item = LibraryItem(
+                id = "abc123",
+                title = "Test Item",
+                author = "Author",
+                progressPercent = 10,
+                itemType = LibraryItemType.Podcast,
+            ),
+            progressPercent = 10,
+            chapters = emptyList(),
+        )
+
+        val context = resolvePlayerSelectedChapterContext(
+            playbackActiveItemId = "abc123",
+            playbackLibraryItemDetail = detail,
+            selectedChapterId = null,
+            selectedChapterStartSeconds = 42,
+        )
+
+        assertNull(context.label)
+        assertEquals(Integer.valueOf(42), context.startSeconds)
+    }
+
+    @Test
     fun `selected chapter context matches the active playback item only when ids align`() {
         assertEquals(false, isSelectedChapterContextActivePlaybackItem(null, "abc123"))
         assertEquals(true, isSelectedChapterContextActivePlaybackItem(" abc123 ", "abc123"))

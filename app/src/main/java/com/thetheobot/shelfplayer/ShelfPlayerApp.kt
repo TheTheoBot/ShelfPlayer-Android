@@ -597,13 +597,11 @@ internal fun ShelfPlayerApp(
 
     val selectedLibraryItemDetail = selectedLibraryItemDetailState as? ItemDetailState.Loaded
     val playbackLibraryItemDetail = playbackLibraryItemDetailState as? ItemDetailState.Loaded
-    val selectedChapterLabel = playbackLibraryItemDetail
-        ?.detail
-        ?.chapters
-        ?.let { chapters -> selectedChapterId?.let { chapterId -> selectedChapterDisplayLabel(chapters, chapterId) } }
-    val selectedChapterContextMatchesActivePlaybackItem = isSelectedChapterContextActivePlaybackItem(
+    val playerSelectedChapterContext = resolvePlayerSelectedChapterContext(
         playbackActiveItemId = playbackActiveItemId,
-        selectedItemId = playbackLibraryItemDetail?.detail?.item?.id,
+        playbackLibraryItemDetail = playbackLibraryItemDetail?.detail,
+        selectedChapterId = selectedChapterId,
+        selectedChapterStartSeconds = selectedChapterStartSeconds,
     )
 
     LaunchedEffect(selectedLibraryItemId, selectedLibraryItemDetailReloadKey) {
@@ -899,16 +897,8 @@ internal fun ShelfPlayerApp(
                         )
                         AppTab.Player -> {
                             val activePlaybackItem = playbackActiveItemId?.let { resolveLibraryItem(it) }
-                            val playerSelectedChapterLabel = if (selectedChapterContextMatchesActivePlaybackItem) {
-                                selectedChapterLabel
-                            } else {
-                                null
-                            }
-                            val playerSelectedChapterStartSeconds = if (selectedChapterContextMatchesActivePlaybackItem) {
-                                selectedChapterStartSeconds
-                            } else {
-                                null
-                            }
+                            val playerSelectedChapterLabel = playerSelectedChapterContext.label
+                            val playerSelectedChapterStartSeconds = playerSelectedChapterContext.startSeconds
                             val playbackResumeHint = activePlaybackItem?.id?.let { summarizeLatestPlaybackProgress(it, latestPlaybackProgress) }
                             PlayerScreen(
                                 padding = padding,
