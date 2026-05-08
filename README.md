@@ -9,3 +9,9 @@ WIP: Kotlin/Jetpack-Compose-Neuaufbau inspiriert von ShelfPlayer mit Material 3 
 
 ## Status
 Initiales Projekt-Setup gestartet.
+
+## Verbindung (HTTP/HTTPS)
+- Die App erlaubt **HTTP und HTTPS** für die Server-URL.
+- Für lokale/self-hosted Setups ist HTTP explizit unterstützt.
+- Bei HTTP zeigt die App eine Sicherheitswarnung an (unverschlüsselte Verbindung).
+- Empfehlung für öffentliche/Internet-erreichbare Instanzen: **HTTPS verwenden**.

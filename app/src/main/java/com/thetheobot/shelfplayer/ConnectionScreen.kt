@@ -30,7 +30,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
-private const val CONNECT_HINT = "Beispiel: https://books.example.com"
+private const val CONNECT_HINT = "Beispiel: http://books.local oder https://books.example.com"
 
 private enum class ConnectionScreenPhase {
     Idle,
@@ -76,10 +76,6 @@ fun validateServerUrl(raw: String): String? {
         return "Server-URL braucht einen Hostnamen"
     }
 
-    if (isHttp && !isAllowedLocalHttpHost(uri.host)) {
-        return "HTTP ist nur für lokale Entwicklungsserver erlaubt"
-    }
-
     if (!uri.userInfo.isNullOrBlank()) {
         return "Server-URL darf keine Zugangsdaten enthalten"
     }
@@ -92,11 +88,14 @@ fun validateServerUrl(raw: String): String? {
     return null
 }
 
-private fun isAllowedLocalHttpHost(host: String): Boolean {
-    return host.equals("localhost", ignoreCase = true) ||
-        host == "127.0.0.1" ||
-        host == "::1" ||
-        host == "10.0.2.2"
+fun serverUrlSecurityWarning(raw: String): String? {
+    val uri = runCatching { java.net.URI(raw.trim()) }.getOrNull() ?: return null
+    val isHttp = uri.scheme?.equals("http", ignoreCase = true) == true
+    return if (isHttp) {
+        "Warnung: HTTP ist unverschlüsselt. Für lokale Setups okay, im Internet bitte HTTPS verwenden."
+    } else {
+        null
+    }
 }
 
 fun validateAccessToken(raw: String): String? {
@@ -212,6 +211,15 @@ fun ConnectionScreen(
         )
         if (validation.serverUrlError != null) {
             Text(validation.serverUrlError, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
+        } else {
+            val warningMessage = serverUrlSecurityWarning(serverUrl)
+            if (warningMessage != null) {
+                Text(
+                    warningMessage,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.tertiary,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                )
+            }
         }
 
         OutlinedTextField(

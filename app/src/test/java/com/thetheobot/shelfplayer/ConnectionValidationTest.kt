@@ -62,11 +62,8 @@ class ConnectionValidationTest {
     }
 
     @Test
-    fun `validateServerUrl rejects remote http url`() {
-        assertEquals(
-            "HTTP ist nur für lokale Entwicklungsserver erlaubt",
-            validateServerUrl("HTTP://books.example.com"),
-        )
+    fun `validateServerUrl accepts remote http url`() {
+        assertNull(validateServerUrl("HTTP://books.example.com"))
     }
 
     @Test
@@ -87,6 +84,24 @@ class ConnectionValidationTest {
     @Test
     fun `validateServerUrl accepts local http url for emulator development`() {
         assertNull(validateServerUrl("http://10.0.2.2:1337"))
+    }
+
+    @Test
+    fun `serverUrlSecurityWarning warns for http urls`() {
+        assertEquals(
+            "Warnung: HTTP ist unverschlüsselt. Für lokale Setups okay, im Internet bitte HTTPS verwenden.",
+            serverUrlSecurityWarning("http://books.example.com"),
+        )
+    }
+
+    @Test
+    fun `serverUrlSecurityWarning is null for https urls`() {
+        assertNull(serverUrlSecurityWarning("https://books.example.com"))
+    }
+
+    @Test
+    fun `serverUrlSecurityWarning is null for malformed urls`() {
+        assertNull(serverUrlSecurityWarning("not-a-url"))
     }
 
     @Test
