@@ -644,17 +644,15 @@
 - Commit(s): `d5b7505` — fix: align validation and chapter context fallback
 - Next step: Commit the docs update, push the branch, and use GitHub Actions to confirm the Android unit tests are green.
 
-## 2026-05-08T23:03:18Z
+## 2026-05-08T23:47:08Z
 - Story/Issue: #6 — Story: Search within active library and navigate to detail
-- Micro-task 1: Added debounced auto-submit to the Search screen so typing a nonblank query now triggers search after a short pause.
-- Micro-task 2: Added regression coverage for debounce behavior, repeated same-query submits, stale cancellation, and replacement-search sequencing.
-- Micro-task 3: Recorded the run in the implementation log so the ongoing Story #6 slice stays documented in-repo.
+- Micro-task 1: Fixed the Search screen coroutine Flow import so the channel-backed command stream uses `kotlinx.coroutines.flow.receiveAsFlow` and stays compatible with the current coroutine APIs.
+- Micro-task 2: Added regression coverage proving whitespace-normalized active search queries still count as duplicates for both `shouldStartSearchRequest` and `shouldAutoSubmitSearch`.
+- Micro-task 3: Recorded this run in the implementation log so the ongoing Story #6 slice stays documented in-repo.
 - Verification:
   - `git diff --check` ✅
-  - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
-  - `java -version` → `command not found`
-  - Local Gradle execution is still blocked here because Java is not installed in this environment.
+  - `./gradlew testDebugUnitTest` could not run locally because Java is not installed in this environment (`./gradlew: line 7: exec: java: not found`).
   - Independent spec review: PASS
   - Independent code quality review: APPROVED
-- Commit(s): pending
-- Next step: Commit, push, and post the GitHub issue update with the final commit hash and CI run link/status once GitHub Actions finishes.
+- Commit(s): `ce8cca0` — fix: normalize search flow import
+- Next step: Push the branch, let GitHub Actions validate the Android build/tests, and update Story #6 with the commit hash and CI run link once the workflow finishes.
