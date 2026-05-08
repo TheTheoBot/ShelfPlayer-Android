@@ -78,6 +78,50 @@ class ItemDetailModelsTest {
     }
 
     @Test
+    fun `player chapter context prefers the active chapter over the selected chapter label fallback`() {
+        assertEquals(
+            "Aktuelles Kapitel: Kapitel 12 · 00:45",
+            playerChapterContextDisplayText(
+                activeChapter = LibraryChapter(
+                    id = "chapter-2",
+                    title = "Kapitel 12",
+                    startSeconds = 45,
+                ),
+                selectedChapterLabel = "Kapitel 01 · 00:05 – 00:15",
+            ),
+        )
+    }
+
+    @Test
+    fun `player chapter context uses the selected chapter label when no active chapter is resolved`() {
+        assertEquals(
+            "Kapitel 01 · 00:05 – 00:15",
+            playerChapterContextDisplayText(
+                activeChapter = null,
+                selectedChapterLabel = "  Kapitel 01  ",
+            ),
+        )
+    }
+
+    @Test
+    fun `player chapter context falls back safely when the selected chapter label is blank or null`() {
+        assertEquals(
+            "Aktuelles Kapitel: Kein Kapitel an dieser Position",
+            playerChapterContextDisplayText(
+                activeChapter = null,
+                selectedChapterLabel = null,
+            ),
+        )
+        assertEquals(
+            "Aktuelles Kapitel: Kein Kapitel an dieser Position",
+            playerChapterContextDisplayText(
+                activeChapter = null,
+                selectedChapterLabel = "   ",
+            ),
+        )
+    }
+
+    @Test
     fun `selected chapter context resolves only for the active playback item`() {
         val detail = LibraryItemDetail(
             item = LibraryItem(

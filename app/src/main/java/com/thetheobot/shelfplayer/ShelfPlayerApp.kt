@@ -1051,7 +1051,7 @@ private fun PlayerScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    activeChapterContextDisplayText(activeQuickAccessChapter),
+                    playerChapterContextDisplayText(activeQuickAccessChapter, selectedChapterLabel),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }

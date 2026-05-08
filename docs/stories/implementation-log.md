@@ -583,8 +583,19 @@
 |- Story/Issue: #12 — Story: Active chapter context follows the playback item
 |- Micro-task 4: Fixed the nullable chapter-detail compile error by making the player-selected chapter label lookup null-safe in `ItemDetailModels.kt`.
 |- Verification:
-|  - `git diff --check` ✅
-|  - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
-|  - The first GitHub Actions build failed on `ItemDetailModels.kt:110` with a nullable-receiver compile error; this follow-up commit addresses that regression.
+||  - `git diff --check` ✅
+||  - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
+||  - The first GitHub Actions build failed on `ItemDetailModels.kt:110` with a nullable-receiver compile error; this follow-up commit addresses that regression.
 |- Commit(s): `0ea63e1` — fix: handle nullable playback chapter detail
 |- Next step: Push the fix, re-run GitHub Actions, and update Story #12 with the final commit hashes and CI run link/status.
+
+## 2026-05-08T19:09:36Z
+- Story/Issue: #12 — Story: Active chapter context follows the playback item
+- Micro-task 1: Added `playerChapterContextDisplayText(...)` as a pure helper that prefers the active chapter and falls back to the selected chapter label or a safe default.
+- Micro-task 2: Wired `PlayerScreen` to use the helper so the chapter-context card now keeps active-chapter priority while showing a selected-chapter fallback when needed.
+- Micro-task 3: Added regression coverage for active-priority, fallback-label, and blank/null-safe chapter-context behavior, then recorded this run in the implementation log.
+- Verification:
+  - `git diff --check` ✅
+  - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
+  - `./gradlew testDebugUnitTest --tests com.thetheobot.shelfplayer.ItemDetailModelsTest` could not run locally because Java is not installed in this environment (`java: not found`)
+- Next step: Push the slice, rerun Android CI, and capture the final commit hash plus Actions run link/status for Story #12.

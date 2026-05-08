@@ -131,6 +131,18 @@ internal fun activeChapterContextDisplayText(chapter: LibraryChapter?): String {
     return "Aktuelles Kapitel: ${activeChapterDisplayLabel(chapter)}"
 }
 
+internal fun playerChapterContextDisplayText(
+    activeChapter: LibraryChapter?,
+    selectedChapterLabel: String?,
+): String {
+    activeChapter?.let { return activeChapterContextDisplayText(it) }
+
+    val fallbackLabel = selectedChapterLabel?.trim().orEmpty()
+    return fallbackLabel.ifBlank {
+        activeChapterContextDisplayText(null)
+    }
+}
+
 internal fun isSelectedChapterContextActivePlaybackItem(
     playbackActiveItemId: String?,
     selectedItemId: String?,
