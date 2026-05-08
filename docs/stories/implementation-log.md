@@ -558,5 +558,9 @@
   - `./gradlew testDebugUnitTest --tests com.thetheobot.shelfplayer.ItemDetailModelsTest` could not run locally because Java is not installed in this environment (`java: not found`)
   - Independent spec review: PASS
   - Independent code quality review: APPROVED
-- Commit(s): `584db99` — feat: refine active chapter playback context
-- Next step: Push to `main`, watch the GitHub Actions run, and update Story #12 with the commit hash and CI run link once the workflow finishes.
+  - GitHub Actions run `25569949104` (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25569949104
+  - GitHub Actions run `25569949096` (Android Debug Build) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25569949096
+  - GitHub Actions run `25569949100` (Android APK) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25569949100
+  - GitHub Actions run `25569949105` (Android Unit Tests) — failure: `ConnectionValidationTest` assertions around `validateServerUrl` (pre-existing blocker)
+- Commit(s): `584db99` — feat: refine active chapter playback context; `bbdbe77` — docs: log active chapter context run
+- Next step: Update Story #12 with the commit hash and CI run link/status, then continue with the next MVP slice once the blocking validation tests are addressed.
