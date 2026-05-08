@@ -12,6 +12,7 @@ Initiales Projekt-Setup gestartet.
 
 ## Verbindung (HTTP/HTTPS)
 - Die App erlaubt **HTTP und HTTPS** für die Server-URL.
+- Hostname **oder IP-Adresse** (z. B. `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`, `127.0.0.1`, `10.0.2.2`) sind erlaubt.
 - Für lokale/self-hosted Setups ist HTTP explizit unterstützt.
 - Bei HTTP zeigt die App eine Sicherheitswarnung an (unverschlüsselte Verbindung).
 - Empfehlung für öffentliche/Internet-erreichbare Instanzen: **HTTPS verwenden**.

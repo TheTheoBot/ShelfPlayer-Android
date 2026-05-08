@@ -72,8 +72,9 @@ fun validateServerUrl(raw: String): String? {
         return "Server-URL muss mit http:// oder https:// beginnen"
     }
 
-    if (uri.host.isNullOrBlank()) {
-        return "Server-URL braucht einen Hostnamen"
+    val host = uri.host ?: extractHostFromAuthority(trimmed)
+    if (host.isNullOrBlank()) {
+        return "Server-URL braucht einen Hostnamen oder eine IP-Adresse"
     }
 
     if (!uri.userInfo.isNullOrBlank()) {
@@ -86,6 +87,23 @@ fun validateServerUrl(raw: String): String? {
     }
 
     return null
+}
+
+fun extractHostFromAuthority(rawUrl: String): String? {
+    val afterScheme = rawUrl.substringAfter("://", missingDelimiterValue = "")
+    if (afterScheme.isBlank()) return null
+
+    val authority = afterScheme.substringBefore('/').substringBefore('?').substringBefore('#')
+    if (authority.isBlank()) return null
+
+    val withoutUserInfo = authority.substringAfterLast('@')
+    if (withoutUserInfo.isBlank()) return null
+
+    return if (withoutUserInfo.startsWith("[")) {
+        withoutUserInfo.substringBefore(']').removePrefix("[").takeIf { it.isNotBlank() }
+    } else {
+        withoutUserInfo.substringBefore(':').takeIf { it.isNotBlank() }
+    }
 }
 
 fun serverUrlSecurityWarning(raw: String): String? {

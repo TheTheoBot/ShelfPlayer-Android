@@ -27,7 +27,7 @@ class ConnectionValidationTest {
     @Test
     fun `validateServerUrl rejects missing host`() {
         assertEquals(
-            "Server-URL braucht einen Hostnamen",
+            "Server-URL braucht einen Hostnamen oder eine IP-Adresse",
             validateServerUrl("https://"),
         )
     }
@@ -87,6 +87,13 @@ class ConnectionValidationTest {
     }
 
     @Test
+    fun `validateServerUrl accepts private lan ipv4 addresses`() {
+        assertNull(validateServerUrl("http://192.168.178.24:13378"))
+        assertNull(validateServerUrl("http://172.16.0.5:1337"))
+        assertNull(validateServerUrl("http://10.42.0.12"))
+    }
+
+    @Test
     fun `serverUrlSecurityWarning warns for http urls`() {
         assertEquals(
             "Warnung: HTTP ist unverschlüsselt. Für lokale Setups okay, im Internet bitte HTTPS verwenden.",
@@ -102,6 +109,13 @@ class ConnectionValidationTest {
     @Test
     fun `serverUrlSecurityWarning is null for malformed urls`() {
         assertNull(serverUrlSecurityWarning("not-a-url"))
+    }
+
+    @Test
+    fun `extractHostFromAuthority parses host and ip variants`() {
+        assertEquals("books.example.com", extractHostFromAuthority("https://books.example.com"))
+        assertEquals("192.168.178.24", extractHostFromAuthority("http://192.168.178.24:13378"))
+        assertEquals("::1", extractHostFromAuthority("http://[::1]:1337"))
     }
 
     @Test
