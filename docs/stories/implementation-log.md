@@ -342,3 +342,22 @@
 - `e35571f` — feat: add playback progress autosync
 - Next step:
 - Continue with the next MVP slice only if new CI feedback exposes a regression; otherwise move on.
+
+## 2026-05-08T04:05:00Z
+- Story/Issue: #8 — Story: Internal route foundation for item detail and player
+- Implemented:
+- Added a pure internal route parser plus a small launch-selection helper for item detail and player destinations.
+- Wired `MainActivity` and `ShelfPlayerApp` to accept an optional initial route so the app can open the right tab/detail state on launch.
+- Added a minimal manifest deep-link filter for `shelfplayer://app/player` and `shelfplayer://app/item/*`.
+- Added unit tests for both the route parser and the launch-selection helper.
+- Verification:
+- `git diff --check` ✅
+- `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
+- Independent spec review: PASS
+- Independent code quality review: APPROVED after narrowing the manifest deep-link filter.
+- GitHub issue: https://github.com/TheTheoBot/ShelfPlayer-Android/issues/8
+- GitHub issue comment: https://github.com/TheTheoBot/ShelfPlayer-Android/issues/8#issuecomment-4403252070
+- GitHub Actions CI: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25535973373 (success)
+- Commit(s): `c42f7f8` (feature), `3c12c84` (merge on main)
+- Next step:
+- Continue with the next MVP slice after this route foundation is merged and monitored in CI.
