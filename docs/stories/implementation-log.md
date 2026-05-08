@@ -486,3 +486,18 @@
 |- Independent code quality review: APPROVED
 |- Commit(s): pending
 |- Next step: Commit and push this navigation slice, then add the GitHub issue comment with the commit hash and CI run link once GitHub Actions finishes.
+
+## 2026-05-08T13:05:21Z
+|- Story/Issue: #10 — Story: Settings playback summary polish
+|- Implemented:
+|- Added a compact playback-defaults summary line to the Settings screen so skip interval, default rate, and theme mode are visible at a glance.
+|- Localized theme-mode labels and kept the existing settings controls intact.
+|- Added unit coverage for the summary helper and the localized theme labels.
+|- Verification:
+|- `git diff --check` ✅
+|- Static diff scan: no secrets / shell injection / eval / pickle / SQL injection matches
+|- Local Android Gradle execution is blocked here because `java` is not installed in this environment.
+|- Independent spec review: PASS
+|- Independent code quality review: APPROVED
+|- Commit(s): `a2512bc` — feat(settings): add playback defaults summary
+|- Next step: Push, watch GitHub Actions, and post the commit hash plus CI run link back onto Story #10.
