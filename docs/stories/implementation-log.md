@@ -501,3 +501,16 @@
 |- Independent code quality review: APPROVED
 |- Commit(s): `a2512bc` — feat(settings): add playback defaults summary
 |- Next step: Push, watch GitHub Actions, and post the commit hash plus CI run link back onto Story #10.
+
+## 2026-05-08T13:46:48Z
+- Story/Issue: #10 — Story: Settings playback summary polish
+- Implemented:
+- Replaced the inline playback-summary text with a compact labeled summary card so skip interval, default rate, and theme are easier to scan.
+- Added pure summary-row helpers in `SettingsScreen.kt` to keep the UI thin and the output unit-testable, reusing existing formatting helpers.
+- Added regression coverage for the summary rows in `SettingsScreenTest.kt`.
+- Verification:
+- `git diff --check` ✅
+- `./gradlew testDebugUnitTest --tests com.thetheobot.shelfplayer.SettingsScreenTest` could not run locally because `java` is not installed in this environment.
+- Commit(s): pending
+- Next step:
+- Commit this slice, push it, and update Story #10 with the commit hash and CI run link once GitHub Actions finishes.

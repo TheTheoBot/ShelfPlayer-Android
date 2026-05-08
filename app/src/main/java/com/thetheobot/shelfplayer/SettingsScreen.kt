@@ -36,10 +36,49 @@ internal fun settingsConnectShortcutButtonLabel(session: ConnectionSession): Str
     }
 }
 
-internal fun settingsPlaybackSummaryText(settings: AppSettings): String {
-    return "Sprung ${formatSkipInterval(settings.playbackSkipIntervalSeconds)} · " +
-        "Rate ${formatPlaybackRate(settings.defaultPlaybackRate)} · " +
-        "Darstellung ${themeModeButtonLabel(settings.themeMode)}"
+internal data class SettingsPlaybackSummaryRow(
+    val label: String,
+    val value: String,
+)
+
+internal fun settingsPlaybackSummaryRows(settings: AppSettings): List<SettingsPlaybackSummaryRow> {
+    return listOf(
+        SettingsPlaybackSummaryRow("Sprungintervall", formatSkipInterval(settings.playbackSkipIntervalSeconds)),
+        SettingsPlaybackSummaryRow("Standardrate", formatPlaybackRate(settings.defaultPlaybackRate)),
+        SettingsPlaybackSummaryRow("Darstellung", themeModeButtonLabel(settings.themeMode)),
+    )
+}
+
+@Composable
+private fun SettingsPlaybackSummaryBlock(settings: AppSettings) {
+    Card(colors = CardDefaults.elevatedCardColors()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("Wiedergabe auf einen Blick", style = MaterialTheme.typography.titleMedium)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                settingsPlaybackSummaryRows(settings).forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            row.label,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Text(
+                            row.value,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -69,11 +108,8 @@ fun SettingsScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
-            settingsPlaybackSummaryText(settings),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+
+        SettingsPlaybackSummaryBlock(settings)
 
         Card(colors = CardDefaults.elevatedCardColors()) {
             Column(

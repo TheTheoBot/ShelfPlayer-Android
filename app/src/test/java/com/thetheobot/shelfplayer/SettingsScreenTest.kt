@@ -41,14 +41,23 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun `settings playback summary text reflects the current defaults and theme`() {
+    fun `settings playback summary rows expose the normalized values in a compact labeled form`() {
         assertEquals(
-            "Sprung 15s · Rate 1.0x · Darstellung System",
-            settingsPlaybackSummaryText(AppSettings()),
+            listOf(
+                SettingsPlaybackSummaryRow("Sprungintervall", "15s"),
+                SettingsPlaybackSummaryRow("Standardrate", "1.0x"),
+                SettingsPlaybackSummaryRow("Darstellung", "System"),
+            ),
+            settingsPlaybackSummaryRows(AppSettings()),
         )
+
         assertEquals(
-            "Sprung 30s · Rate 1.25x · Darstellung Dunkel",
-            settingsPlaybackSummaryText(
+            listOf(
+                SettingsPlaybackSummaryRow("Sprungintervall", "30s"),
+                SettingsPlaybackSummaryRow("Standardrate", "1.25x"),
+                SettingsPlaybackSummaryRow("Darstellung", "Dunkel"),
+            ),
+            settingsPlaybackSummaryRows(
                 AppSettings(
                     playbackSkipIntervalSeconds = 30,
                     defaultPlaybackRate = 1.25f,
