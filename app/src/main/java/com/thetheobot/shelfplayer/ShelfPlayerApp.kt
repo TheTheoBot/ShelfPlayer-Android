@@ -54,7 +54,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -124,6 +123,18 @@ internal fun formatPlaybackRate(rate: Float): String {
     } else {
         String.format(Locale.US, "%.2fx", rate)
     }
+}
+
+internal fun buildDirectPlaybackStreamUrl(serverUrl: String, itemId: String): String {
+    val encodedItemId = encodeUrlPathSegment(itemId)
+    return "${normalizeServerUrl(serverUrl)}/api/items/$encodedItemId/play"
+}
+
+internal fun resolvePlaybackFlushPositionMs(
+    playbackPositionMs: Int,
+    mediaPlayerPositionMs: Int?,
+): Int {
+    return (mediaPlayerPositionMs ?: playbackPositionMs).coerceAtLeast(0)
 }
 
 private val playbackRateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
@@ -210,11 +221,9 @@ internal fun ShelfPlayerApp(
         return detail.chapters.firstOrNull { it.id == chapterId }?.startSeconds
     }
 
-    fun buildDirectStreamUrl(itemId: String, accessToken: String): String? {
+    fun buildDirectStreamUrl(itemId: String): String? {
         val server = connectionCredentials?.serverUrl?.takeIf { it.isNotBlank() } ?: return null
-        val encodedItemId = encodeUrlPathSegment(itemId)
-        val encodedToken = encodeUrlPathSegment(accessToken)
-        return "${normalizeServerUrl(server)}/api/items/$encodedItemId/play?token=$encodedToken"
+        return buildDirectPlaybackStreamUrl(server, itemId)
     }
 
     fun requestPlaybackStreamUrl(itemId: String, accessToken: String): String? {
@@ -261,12 +270,12 @@ internal fun ShelfPlayerApp(
                 ?.takeIf { it.isNotBlank() }
 
             if (relativeContentUrl != null) {
-                "$normalizedServer${if (relativeContentUrl.startsWith('/')) "" else "/"}$relativeContentUrl?token=${encodeUrlPathSegment(accessToken)}"
+                "$normalizedServer${if (relativeContentUrl.startsWith('/')) "" else "/"}$relativeContentUrl"
             } else {
-                buildDirectStreamUrl(itemId, accessToken)
+                buildDirectStreamUrl(itemId)
             }
         } catch (_: Throwable) {
-            buildDirectStreamUrl(itemId, accessToken)
+            buildDirectStreamUrl(itemId)
         }
     }
 
@@ -275,32 +284,12 @@ internal fun ShelfPlayerApp(
         player.playbackParams = playbackParams.setSpeed(rate)
     }
 
-    fun syncPlaybackProgressNow(blocking: Boolean = false) {
+    fun syncPlaybackProgressNow() {
         val itemId = playbackActiveItemId ?: return
         val durationMs = playbackDurationMs
         if (durationMs <= 0) return
         val positionMs = playbackPositionMs.coerceIn(0, durationMs)
-        localProgressRepository.recordProgress(itemId, positionMs, durationMs)
-        if (blocking) {
-            runBlocking(Dispatchers.IO) {
-                progressRepository.syncProgress(itemId, positionMs, durationMs)
-            }
-        } else {
-            playbackProgressScope.launch {
-                withContext(Dispatchers.IO) {
-                    progressRepository.syncProgress(itemId, positionMs, durationMs)
-                }
-            }
-        }
-    }
-
-    fun flushPlaybackProgressOnDispose() {
-        val itemId = playbackActiveItemId ?: return
-        val durationMs = playbackDurationMs
-        if (durationMs <= 0) return
-        val positionMs = playbackPositionMs.coerceIn(0, durationMs)
-        localProgressRepository.recordProgress(itemId, positionMs, durationMs)
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+        playbackProgressScope.launch {
             progressRepository.syncProgress(itemId, positionMs, durationMs)
         }
     }
@@ -339,6 +328,30 @@ internal fun ShelfPlayerApp(
         val activeItemId = playbackActiveItemId
         if (activeItemId != null && playbackDurationMs > 0) {
             syncPlaybackProgressNow()
+        }
+        clearPlaybackStateWithoutSync()
+    }
+
+    fun flushPlaybackProgressOnDispose() {
+        val activeItemId = playbackActiveItemId
+        if (activeItemId != null && playbackDurationMs > 0) {
+            val durationMs = playbackDurationMs
+            val positionMs = resolvePlaybackFlushPositionMs(playbackPositionMs, mediaPlayer?.currentPosition)
+            val flushScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            flushScope.launch {
+                localProgressRepository.recordProgress(
+                    itemId = activeItemId,
+                    positionMs = positionMs.coerceAtMost(durationMs),
+                    durationMs = durationMs,
+                    persistSynchronously = true,
+                )
+                progressRepository.syncProgress(
+                    itemId = activeItemId,
+                    positionMs = positionMs.coerceAtMost(durationMs),
+                    durationMs = durationMs,
+                    persistLocalSnapshot = false,
+                )
+            }.invokeOnCompletion { flushScope.cancel() }
         }
         clearPlaybackStateWithoutSync()
     }
@@ -611,7 +624,6 @@ internal fun ShelfPlayerApp(
     DisposableEffect(Unit) {
         onDispose {
             flushPlaybackProgressOnDispose()
-            clearPlaybackStateWithoutSync()
             playbackProgressScope.cancel()
         }
     }
@@ -835,11 +847,13 @@ internal fun ShelfPlayerApp(
                                 ?.detail
                                 ?.chapters
                                 .orEmpty()
+                            val playbackResumeHint = activePlaybackItem?.id?.let { summarizeLatestPlaybackProgress(it, latestPlaybackProgress) }
                             PlayerScreen(
                                 padding = padding,
                                 activeLibraryItem = activePlaybackItem,
                                 selectedChapterLabel = selectedChapterLabel,
                                 selectedChapterStartSeconds = selectedChapterStartSeconds,
+                                playbackResumeHint = playbackResumeHint,
                                 isPreparingPlayback = isPreparingPlayback,
                                 isPlayingPlayback = isPlayingPlayback,
                                 playbackRate = playbackRate,
@@ -891,6 +905,7 @@ private fun PlayerScreen(
     activeLibraryItem: LibraryItem?,
     selectedChapterLabel: String?,
     selectedChapterStartSeconds: Int?,
+    playbackResumeHint: String?,
     isPreparingPlayback: Boolean,
     isPlayingPlayback: Boolean,
     playbackRate: Float,
@@ -967,6 +982,20 @@ private fun PlayerScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        playbackResumeHint?.let { hint ->
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    "Fortsetzen",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    hint,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

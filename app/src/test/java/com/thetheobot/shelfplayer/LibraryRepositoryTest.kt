@@ -375,12 +375,27 @@ class LibraryRepositoryTest {
     }
 
     @Test
+    fun `direct playback stream urls omit the access token query parameter`() {
+        assertEquals(
+            "https://books.example.com/api/items/item%2F42/play",
+            buildDirectPlaybackStreamUrl("https://books.example.com/", "item/42"),
+        )
+    }
+
+    @Test
+    fun `playback flush position prefers the media player position when available`() {
+        assertEquals(42, resolvePlaybackFlushPositionMs(100, 42))
+        assertEquals(100, resolvePlaybackFlushPositionMs(100, null))
+        assertEquals(0, resolvePlaybackFlushPositionMs(-5, null))
+    }
+
+    @Test
     fun `playback progress helper reuses requested chapter or saved progress for the same item`() {
         val savedProgress = PlaybackProgressSnapshot(
             itemId = "item-1",
             positionMs = 123_000,
             durationMs = 500_000,
-            syncedAtEpochMs = 1L,
+            recordedAtEpochMs = 1L,
         )
 
         assertEquals(
@@ -416,7 +431,7 @@ class LibraryRepositoryTest {
                     itemId = "item-1",
                     positionMs = 500_000,
                     durationMs = 500_000,
-                    syncedAtEpochMs = 2L,
+                    recordedAtEpochMs = 2L,
                 ),
             ),
         )
@@ -448,38 +463,7 @@ class LibraryRepositoryTest {
         assertEquals("item-1", snapshot?.itemId)
         assertEquals(12_345, snapshot?.positionMs)
         assertEquals(54_321, snapshot?.durationMs)
-        assertTrue((snapshot?.syncedAtEpochMs ?: 0L) > 0L)
+        assertTrue((snapshot?.recordedAtEpochMs ?: 0L) > 0L)
     }
 
-    @Test
-    fun `item detail helpers summarize loading loaded and error states`() {
-        val detail = LibraryItemDetail(
-            item = LibraryItem(
-                id = "example-id",
-                title = "Example Title",
-                author = "Example Author",
-                progressPercent = 44,
-                itemType = LibraryItemType.Audiobook,
-            ),
-            progressPercent = 44,
-            description = "A long-form description for the item detail screen.",
-            chapters = listOf(
-                LibraryChapter(id = "chapter-1", title = "Intro", startSeconds = 0, endSeconds = 120),
-            ),
-        )
-
-        assertEquals("Details werden geladen…", itemDetailStateTitle(ItemDetailState.Loading))
-        assertEquals(
-            "Die Detailansicht wird vorbereitet.",
-            itemDetailStateMessage(ItemDetailState.Loading),
-        )
-        assertEquals("Example Title", itemDetailStateTitle(ItemDetailState.Loaded(detail)))
-        assertEquals(
-            "1 Kapitel · 44% · A long-form description for the item detail screen.",
-            itemDetailStateMessage(ItemDetailState.Loaded(detail)),
-        )
-        assertEquals("Bitte später erneut versuchen.", itemDetailStateMessage(ItemDetailState.Error(message = "   ")))
-        assertEquals("03:20 – 05:00", formatChapterRange(200, 300))
-        assertEquals("03:20", formatChapterRange(200, null))
-    }
 }

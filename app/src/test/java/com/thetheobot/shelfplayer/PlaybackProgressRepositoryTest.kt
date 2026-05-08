@@ -2,6 +2,7 @@ package com.thetheobot.shelfplayer
 
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayOutputStream
@@ -103,7 +104,25 @@ class PlaybackProgressRepositoryTest {
         assertEquals("item-1", snapshot?.itemId)
         assertEquals(12_345, snapshot?.positionMs)
         assertEquals(54_321, snapshot?.durationMs)
-        assertTrue((snapshot?.syncedAtEpochMs ?: 0L) > 0L)
+        assertTrue((snapshot?.recordedAtEpochMs ?: 0L) > 0L)
+    }
+
+    @Test
+    fun `shared preferences playback progress repository discards invalid persisted snapshots`() {
+        val sharedPreferences = FakeSharedPreferences()
+        sharedPreferences.edit()
+            .putString("https://books.example.com::playback_progress_item_id", "item-1")
+            .putInt("https://books.example.com::playback_progress_position_ms", 0)
+            .putInt("https://books.example.com::playback_progress_duration_ms", 3_272_000)
+            .putLong("https://books.example.com::playback_progress_synced_at_epoch_ms", 123L)
+            .apply()
+
+        val repository = SharedPreferencesPlaybackProgressRepository(
+            sharedPreferences = sharedPreferences,
+            namespace = "https://books.example.com",
+        )
+
+        assertNull(repository.latestProgress.value)
     }
 
     @Test
@@ -120,7 +139,124 @@ class PlaybackProgressRepositoryTest {
             namespace = "https://books-two.example.com",
         )
 
-        assertEquals(null, otherNamespaceRepository.latestProgress.value)
+        assertNull(otherNamespaceRepository.latestProgress.value)
+    }
+
+    @Test
+    fun `summarize latest playback progress returns a hint for the active item with a resumable snapshot`() {
+        val hint = summarizeLatestPlaybackProgress(
+            itemId = "item-1",
+            latestProgress = PlaybackProgressSnapshot(
+                itemId = "item-1",
+                positionMs = 754_000,
+                durationMs = 3_272_000,
+                recordedAtEpochMs = 123L,
+            ),
+        )
+
+        assertEquals("Zuletzt gespeichert bei 12:34 von 54:32", hint)
+    }
+
+    @Test
+    fun `summarize latest playback progress formats hour-long durations clearly`() {
+        val hint = summarizeLatestPlaybackProgress(
+            itemId = "item-1",
+            latestProgress = PlaybackProgressSnapshot(
+                itemId = "item-1",
+                positionMs = 3_723_000,
+                durationMs = 7_265_000,
+                recordedAtEpochMs = 123L,
+            ),
+        )
+
+        assertEquals("Zuletzt gespeichert bei 1:02:03 von 2:01:05", hint)
+    }
+
+    @Test
+    fun `summarize latest playback progress returns null for stale finished or zero progress`() {
+        assertNull(
+            summarizeLatestPlaybackProgress(
+                itemId = "item-1",
+                latestProgress = PlaybackProgressSnapshot(
+                    itemId = "item-2",
+                    positionMs = 754_000,
+                    durationMs = 3_272_000,
+                    recordedAtEpochMs = 123L,
+                ),
+            ),
+        )
+        assertNull(
+            summarizeLatestPlaybackProgress(
+                itemId = "item-1",
+                latestProgress = PlaybackProgressSnapshot(
+                    itemId = "item-1",
+                    positionMs = 3_272_000,
+                    durationMs = 3_272_000,
+                    recordedAtEpochMs = 123L,
+                ),
+            ),
+        )
+        assertNull(
+            summarizeLatestPlaybackProgress(
+                itemId = "item-1",
+                latestProgress = PlaybackProgressSnapshot(
+                    itemId = "item-1",
+                    positionMs = 0,
+                    durationMs = 3_272_000,
+                    recordedAtEpochMs = 123L,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `resolve playback start position honors explicit requested start over saved progress`() {
+        assertEquals(
+            42,
+            resolvePlaybackStartPositionSeconds(
+                itemId = "item-1",
+                requestedStartPositionSeconds = 42,
+                latestProgress = PlaybackProgressSnapshot(
+                    itemId = "item-1",
+                    positionMs = 754_000,
+                    durationMs = 3_272_000,
+                    recordedAtEpochMs = 123L,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `resolve playback start position clamps negative requested positions to zero`() {
+        assertEquals(0, resolvePlaybackStartPositionSeconds("item-1", -12, null))
+    }
+
+    @Test
+    fun `resolve playback start position ignores stale or completed saved progress`() {
+        assertNull(
+            resolvePlaybackStartPositionSeconds(
+                itemId = "item-1",
+                requestedStartPositionSeconds = null,
+                latestProgress = PlaybackProgressSnapshot(
+                    itemId = "item-2",
+                    positionMs = 754_000,
+                    durationMs = 3_272_000,
+                    recordedAtEpochMs = 123L,
+                ),
+            ),
+        )
+        assertNull(
+            resolvePlaybackStartPositionSeconds(
+                itemId = "item-1",
+                requestedStartPositionSeconds = null,
+                latestProgress = PlaybackProgressSnapshot(
+                    itemId = "item-1",
+                    positionMs = 3_272_000,
+                    durationMs = 3_272_000,
+                    recordedAtEpochMs = 123L,
+                ),
+            ),
+        )
     }
 
     private class RecordingHttpURLConnection(

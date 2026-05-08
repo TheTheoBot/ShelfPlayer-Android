@@ -426,3 +426,17 @@
   - GitHub Actions run `25543341419` (Android Unit Tests) — failure: pre-existing duplicate test-function overloads in `LibraryRepositoryTest.kt`
 - Commit(s): `4e859dc` — feat: handle runtime launch re-entry; `cceb8cd` — fix: restore build for launch re-entry
 - Next step: Update Issue #8 with the commit hash and CI run link/status, then commit this log update.
+
+## 2026-05-08T08:18:19Z
+- Story/Issue: #4 — Story: Player progress sync and resume
+- Implemented:
+- Added a reusable resume-progress summary helper and surfaced it in the Player screen for the active item.
+- Hardened resume-start handling with shared saved-progress validity checks, explicit requested-start precedence, and regression coverage for stale/completed/zero-position snapshots.
+- Removed progress tokens from stream URLs so playback now relies on the existing Authorization header instead of leaking credentials in query parameters.
+- Sanitized persisted playback snapshots on read so corrupt legacy data is discarded instead of surfacing as an invalid state.
+- Verification:
+- `git diff --check` ✅
+- Local Gradle execution is blocked here because `java` is not installed in this environment.
+- Commit(s): pending
+- Next step:
+- Commit and push the player/progress polish slice, then update Story #4 with the commit hash and CI run link once GitHub Actions finishes.

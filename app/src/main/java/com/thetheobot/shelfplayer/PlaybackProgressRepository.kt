@@ -11,7 +11,7 @@ data class PlaybackProgressSnapshot(
     val itemId: String,
     val positionMs: Int,
     val durationMs: Int,
-    val syncedAtEpochMs: Long,
+    val recordedAtEpochMs: Long,
 )
 
 interface PlaybackProgressRepository {
@@ -28,15 +28,52 @@ internal fun resolvePlaybackStartPositionSeconds(
     requestedStartPositionSeconds?.let { return it.coerceAtLeast(0) }
 
     val savedProgress = latestProgress ?: return null
-    if (savedProgress.itemId != itemId || savedProgress.positionMs <= 0) {
-        return null
-    }
-
-    if (savedProgress.durationMs > 0 && savedProgress.positionMs >= savedProgress.durationMs) {
+    if (!isValidSavedPlaybackProgress(itemId, savedProgress)) {
         return null
     }
 
     return savedProgress.positionMs / 1000
+}
+
+internal fun summarizeLatestPlaybackProgress(
+    itemId: String,
+    latestProgress: PlaybackProgressSnapshot?,
+): String? {
+    val savedProgress = latestProgress ?: return null
+    if (!isValidSavedPlaybackProgress(itemId, savedProgress)) {
+        return null
+    }
+
+    return buildString {
+        append("Zuletzt gespeichert bei ")
+        append(formatPlaybackProgressDuration(savedProgress.positionMs))
+        if (savedProgress.durationMs > 0) {
+            append(" von ")
+            append(formatPlaybackProgressDuration(savedProgress.durationMs))
+        }
+    }
+}
+
+private fun isValidSavedPlaybackProgress(
+    itemId: String,
+    savedProgress: PlaybackProgressSnapshot,
+): Boolean {
+    return savedProgress.itemId == itemId &&
+        savedProgress.positionMs > 0 &&
+        (savedProgress.durationMs <= 0 || savedProgress.positionMs < savedProgress.durationMs)
+}
+
+private fun formatPlaybackProgressDuration(milliseconds: Int): String {
+    if (milliseconds <= 0) return "00:00"
+    val totalSeconds = milliseconds / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%02d:%02d".format(minutes, seconds)
+    }
 }
 
 class SharedPreferencesPlaybackProgressRepository(
@@ -46,19 +83,23 @@ class SharedPreferencesPlaybackProgressRepository(
     private val _latestProgress = MutableStateFlow(readSnapshot())
     override val latestProgress: StateFlow<PlaybackProgressSnapshot?> = _latestProgress
 
-    fun recordProgress(itemId: String, positionMs: Int, durationMs: Int) {
+    fun recordProgress(itemId: String, positionMs: Int, durationMs: Int, persistSynchronously: Boolean = false) {
         val snapshot = PlaybackProgressSnapshot(
             itemId = itemId,
             positionMs = positionMs.coerceAtLeast(0),
             durationMs = durationMs.coerceAtLeast(0),
-            syncedAtEpochMs = System.currentTimeMillis(),
+            recordedAtEpochMs = System.currentTimeMillis(),
         )
-        sharedPreferences.edit()
+        val editor = sharedPreferences.edit()
             .putString(key(KEY_ITEM_ID), snapshot.itemId)
             .putInt(key(KEY_POSITION_MS), snapshot.positionMs)
             .putInt(key(KEY_DURATION_MS), snapshot.durationMs)
-            .putLong(key(KEY_SYNCED_AT_EPOCH_MS), snapshot.syncedAtEpochMs)
-            .apply()
+            .putLong(key(KEY_RECORDED_AT_EPOCH_MS), snapshot.recordedAtEpochMs)
+        if (persistSynchronously) {
+            editor.commit()
+        } else {
+            editor.apply()
+        }
         _latestProgress.value = snapshot
     }
 
@@ -72,13 +113,14 @@ class SharedPreferencesPlaybackProgressRepository(
 
         val positionMs = sharedPreferences.getInt(key(KEY_POSITION_MS), 0)
         val durationMs = sharedPreferences.getInt(key(KEY_DURATION_MS), 0)
-        val syncedAtEpochMs = sharedPreferences.getLong(key(KEY_SYNCED_AT_EPOCH_MS), 0L)
-        return PlaybackProgressSnapshot(
+        val recordedAtEpochMs = sharedPreferences.getLong(key(KEY_RECORDED_AT_EPOCH_MS), 0L)
+        val snapshot = PlaybackProgressSnapshot(
             itemId = itemId,
             positionMs = positionMs,
             durationMs = durationMs,
-            syncedAtEpochMs = syncedAtEpochMs,
+            recordedAtEpochMs = recordedAtEpochMs,
         )
+        return if (isValidSavedPlaybackProgress(itemId, snapshot)) snapshot else null
     }
 
     private fun key(baseKey: String): String {
@@ -89,7 +131,7 @@ class SharedPreferencesPlaybackProgressRepository(
         const val KEY_ITEM_ID = "playback_progress_item_id"
         const val KEY_POSITION_MS = "playback_progress_position_ms"
         const val KEY_DURATION_MS = "playback_progress_duration_ms"
-        const val KEY_SYNCED_AT_EPOCH_MS = "playback_progress_synced_at_epoch_ms"
+        const val KEY_RECORDED_AT_EPOCH_MS = "playback_progress_synced_at_epoch_ms"
     }
 }
 
@@ -101,7 +143,18 @@ class AudiobookshelfPlaybackProgressRepository(
     override val latestProgress: StateFlow<PlaybackProgressSnapshot?> = localRepository.latestProgress
 
     override suspend fun syncProgress(itemId: String, positionMs: Int, durationMs: Int) {
-        localRepository.syncProgress(itemId, positionMs, durationMs)
+        syncProgress(itemId, positionMs, durationMs, persistLocalSnapshot = true)
+    }
+
+    suspend fun syncProgress(
+        itemId: String,
+        positionMs: Int,
+        durationMs: Int,
+        persistLocalSnapshot: Boolean,
+    ) {
+        if (persistLocalSnapshot) {
+            localRepository.syncProgress(itemId, positionMs, durationMs)
+        }
         val credentials = connectionProvider() ?: return
         val token = credentials.accessToken.trim()
         if (token.isBlank()) return
