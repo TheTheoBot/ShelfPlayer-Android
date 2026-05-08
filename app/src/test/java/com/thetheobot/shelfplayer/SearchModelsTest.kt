@@ -64,6 +64,30 @@ class SearchModelsTest {
     }
 
     @Test
+    fun `auto submit helper blocks duplicate same query while a search is already active`() {
+        assertFalse(shouldAutoSubmitSearch("   ", SearchState.Idle))
+        assertFalse(shouldAutoSubmitSearch("project", SearchState.Idle))
+        assertFalse(shouldAutoSubmitSearch("project", SearchState.Searching(query = "project")))
+        assertFalse(shouldAutoSubmitSearch("project", SearchState.Typing(query = "other")))
+        assertTrue(shouldAutoSubmitSearch("project", SearchState.Typing(query = "project")))
+
+        assertFalse(
+            shouldAutoSubmitSearch(
+                "project",
+                SearchState.Typing(query = "project"),
+                activeSearchQuery = "project",
+            ),
+        )
+        assertTrue(
+            shouldAutoSubmitSearch(
+                "project",
+                SearchState.Typing(query = "project"),
+                activeSearchQuery = "other",
+            ),
+        )
+    }
+
+    @Test
     fun `search library items matches tokens against title author and id`() {
         val items = listOf(
             sampleItem("project-hail-mary", "Project Hail Mary", "Andy Weir"),
@@ -78,16 +102,11 @@ class SearchModelsTest {
     }
 
     @Test
-    fun `submission tracker invalidates stale tokens`() {
-        val tracker = SearchSubmissionTracker()
-        val firstToken = tracker.nextToken()
-
-        assertTrue(tracker.accepts(firstToken))
-        tracker.invalidate()
-        assertFalse(tracker.accepts(firstToken))
-
-        val secondToken = tracker.nextToken()
-        assertTrue(tracker.accepts(secondToken))
+    fun `search request helper blocks blank and same active queries`() {
+        assertFalse(shouldStartSearchRequest("   "))
+        assertFalse(shouldStartSearchRequest("project", activeSearchQuery = "project"))
+        assertTrue(shouldStartSearchRequest("project", activeSearchQuery = "other"))
+        assertTrue(shouldStartSearchRequest("project"))
     }
 
     private fun assertStateAction(

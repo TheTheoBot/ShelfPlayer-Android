@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -27,9 +29,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,10 +44,25 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import coil.compose.SubcomposeAsyncImage
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.receiveAsFlow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlin.coroutines.coroutineContext
+
+private sealed interface SearchCommand {
+    data class Submit(
+        val query: String,
+        val generation: Int,
+    ) : SearchCommand
+
+    data object CancelActive : SearchCommand
+}
 
 @Composable
 fun SearchScreen(
@@ -57,7 +76,11 @@ fun SearchScreen(
     var loadErrorMessage by remember { mutableStateOf<String?>(null) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
-    val searchSubmissionTracker = remember { SearchSubmissionTracker() }
+    var activeSearchQuery by remember { mutableStateOf<String?>(null) }
+    val currentActiveSearchQuery by rememberUpdatedState(activeSearchQuery)
+    val currentSearchState by rememberUpdatedState(searchState)
+    val searchGeneration = remember { mutableIntStateOf(0) }
+    val searchCommands = remember { Channel<SearchCommand>(Channel.UNLIMITED) }
 
     fun refreshLibrary() {
         scope.launch {
@@ -86,45 +109,108 @@ fun SearchScreen(
         query = ""
         searchState = SearchState.Idle
         loadErrorMessage = null
-        searchSubmissionTracker.invalidate()
+        searchGeneration.intValue += 1
+        searchCommands.trySend(SearchCommand.CancelActive)
     }
 
     fun submitSearch() {
         val normalizedQuery = normalizedSearchQuery(query)
         if (normalizedQuery.isBlank()) {
+            searchCommands.trySend(SearchCommand.CancelActive)
             searchState = SearchState.Idle
             return
         }
 
-        val requestToken = searchSubmissionTracker.nextToken()
-        scope.launch {
-            if (!searchSubmissionTracker.accepts(requestToken)) {
-                return@launch
-            }
-            searchState = SearchState.Searching(normalizedQuery)
-            loadErrorMessage = null
-            val result = runSuspendCatchingPreservingCancellation {
-                repository.search(normalizedQuery)
-            }
-            if (!searchSubmissionTracker.accepts(requestToken)) {
-                return@launch
-            }
-            result.fold(
-                onSuccess = { items ->
-                    searchState = if (items.isEmpty()) {
-                        SearchState.NoResults(normalizedQuery)
-                    } else {
-                        SearchState.Results(normalizedQuery, items)
+        if (searchState is SearchState.Searching && activeSearchQuery == normalizedQuery) {
+            return
+        }
+
+        searchGeneration.intValue += 1
+        searchCommands.trySend(
+            SearchCommand.Submit(
+                query = query,
+                generation = searchGeneration.intValue,
+            ),
+        )
+    }
+
+    LaunchedEffect(searchCommands) {
+        var activeSearchJob: Job? = null
+
+        suspend fun cancelActiveSearch() {
+            activeSearchJob?.cancelAndJoin()
+            activeSearchJob = null
+            activeSearchQuery = null
+        }
+
+        searchCommands.receiveAsFlow().collect { command ->
+            when (command) {
+                SearchCommand.CancelActive -> {
+                    cancelActiveSearch()
+                }
+
+                is SearchCommand.Submit -> {
+                    val normalizedQuery = normalizedSearchQuery(command.query)
+                    val requestGeneration = command.generation
+                    if (normalizedQuery.isBlank()) {
+                        cancelActiveSearch()
+                        searchState = SearchState.Idle
+                        return@collect
                     }
-                },
-                onFailure = { throwable ->
-                    searchState = SearchState.Error(
-                        query = normalizedQuery,
-                        message = throwable.message ?: "Suche konnte nicht ausgeführt werden",
-                    )
-                },
-            )
-            keyboardController?.hide()
+
+                    if (requestGeneration != searchGeneration.intValue) {
+                        return@collect
+                    }
+
+                    if (activeSearchJob?.isActive == true && activeSearchQuery == normalizedQuery) {
+                        return@collect
+                    }
+
+                    cancelActiveSearch()
+
+                    searchState = SearchState.Searching(normalizedQuery)
+                    loadErrorMessage = null
+                    activeSearchQuery = normalizedQuery
+
+                    val searchJob = launch {
+                        val currentJob = coroutineContext[Job]
+                        try {
+                            val result = runSuspendCatchingPreservingCancellation {
+                                repository.search(normalizedQuery)
+                            }
+                            coroutineContext.ensureActive()
+                            if (requestGeneration != searchGeneration.intValue) {
+                                return@launch
+                            }
+                            result.fold(
+                                onSuccess = { items ->
+                                    searchState = if (items.isEmpty()) {
+                                        SearchState.NoResults(normalizedQuery)
+                                    } else {
+                                        SearchState.Results(normalizedQuery, items)
+                                    }
+                                },
+                                onFailure = { throwable ->
+                                    searchState = SearchState.Error(
+                                        query = normalizedQuery,
+                                        message = throwable.message ?: "Suche konnte nicht ausgeführt werden",
+                                    )
+                                },
+                            )
+                            keyboardController?.hide()
+                        } finally {
+                            if (activeSearchJob === currentJob) {
+                                activeSearchJob = null
+                                if (activeSearchQuery == normalizedQuery) {
+                                    activeSearchQuery = null
+                                }
+                            }
+                        }
+                    }
+
+                    activeSearchJob = searchJob
+                }
+            }
         }
     }
 
@@ -149,12 +235,13 @@ fun SearchScreen(
             value = query,
             onValueChange = {
                 query = it
-                searchSubmissionTracker.invalidate()
                 searchState = if (normalizedSearchQuery(it).isBlank()) {
                     SearchState.Idle
                 } else {
                     SearchState.Typing(it)
                 }
+                searchGeneration.intValue += 1
+                searchCommands.trySend(SearchCommand.CancelActive)
             },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
@@ -168,6 +255,17 @@ fun SearchScreen(
                 }
             },
         )
+
+        LaunchedEffect(query) {
+            val debouncedQuery = query
+            if (normalizedSearchQuery(debouncedQuery).isBlank()) {
+                return@LaunchedEffect
+            }
+            delay(SEARCH_AUTOSUBMIT_DEBOUNCE_MS)
+            if (shouldAutoSubmitSearch(debouncedQuery, currentSearchState, currentActiveSearchQuery)) {
+                submitSearch()
+            }
+        }
 
         if (loadErrorMessage != null && searchState !is SearchState.Results && searchState !is SearchState.NoResults) {
             val errorState = SearchState.Error(query = query.trim(), message = loadErrorMessage.orEmpty())

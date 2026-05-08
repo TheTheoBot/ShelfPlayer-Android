@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -221,13 +222,9 @@ class LibraryRepositoryTest {
         assertTrue(!SearchState.Error(query = "project", message = "boom").isRefreshErrorState())
         assertEquals(null, SearchState.Idle.clearSearchActionLabel())
 
-        val tracker = SearchSubmissionTracker()
-        val firstToken = tracker.nextToken()
-        assertTrue(tracker.accepts(firstToken))
-        tracker.invalidate()
-        assertTrue(!tracker.accepts(firstToken))
-        val secondToken = tracker.nextToken()
-        assertTrue(tracker.accepts(secondToken))
+        assertFalse(shouldStartSearchRequest("   "))
+        assertFalse(shouldStartSearchRequest("project", activeSearchQuery = "project"))
+        assertTrue(shouldStartSearchRequest("project", activeSearchQuery = "other"))
     }
 
     @Test

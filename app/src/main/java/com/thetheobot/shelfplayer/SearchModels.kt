@@ -59,25 +59,30 @@ internal fun searchStateMessage(state: SearchState): String {
     }
 }
 
+internal const val SEARCH_AUTOSUBMIT_DEBOUNCE_MS = 350L
+
 internal fun normalizedSearchQuery(query: String): String {
     return query.trim()
 }
 
-internal class SearchSubmissionTracker {
-    private var generation = 0
+internal fun shouldStartSearchRequest(
+    query: String,
+    activeSearchQuery: String? = null,
+): Boolean {
+    val normalizedQuery = normalizedSearchQuery(query)
+    val activeNormalizedQuery = normalizedSearchQuery(activeSearchQuery.orEmpty())
+    return normalizedQuery.isNotBlank() && activeNormalizedQuery != normalizedQuery
+}
 
-    fun nextToken(): Int {
-        generation += 1
-        return generation
-    }
-
-    fun invalidate() {
-        generation += 1
-    }
-
-    fun accepts(token: Int): Boolean {
-        return token == generation
-    }
+internal fun shouldAutoSubmitSearch(
+    query: String,
+    state: SearchState,
+    activeSearchQuery: String? = null,
+): Boolean {
+    val normalizedQuery = normalizedSearchQuery(query)
+    return shouldStartSearchRequest(normalizedQuery, activeSearchQuery) &&
+        state is SearchState.Typing &&
+        normalizedSearchQuery(state.query) == normalizedQuery
 }
 
 internal fun SearchState.canClearSearch(): Boolean {
