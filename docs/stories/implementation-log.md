@@ -371,6 +371,6 @@
 - Verification:
 - `git diff --check` ✅
 - `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
-- Commit(s): pending
+- Commit(s): `a90d613` — feat: harden internal route parsing
 - Next step:
-- Commit the route parser + test + log update, then keep monitoring Story #8 in CI without changing GitHub issues yet.
+- Commit the log update, then keep monitoring Story #8 in CI without changing GitHub issues yet.
