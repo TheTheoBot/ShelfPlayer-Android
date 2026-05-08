@@ -241,17 +241,13 @@ private fun LibraryItemCard(
                 Column(modifier = Modifier.fillMaxWidth(0.72f)) {
                     Text(item.title, style = MaterialTheme.typography.titleMedium)
                     Text(item.author, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        formatLibraryItemMetadata(item),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-                Text(
-                    formatProgress(item.progressPercent),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
             }
-            Text(
-                formatItemType(item.itemType),
-                style = MaterialTheme.typography.labelMedium,
-            )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(onClick = onClick) {
                     Text("Details")

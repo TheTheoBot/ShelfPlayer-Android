@@ -7,5 +7,7 @@ interface LibraryRepository {
 
     suspend fun refresh()
 
+    suspend fun search(query: String): List<LibraryItem>
+
     suspend fun getItemDetail(itemId: String): LibraryItemDetail?
 }

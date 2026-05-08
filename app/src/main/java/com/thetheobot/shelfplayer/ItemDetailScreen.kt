@@ -1,6 +1,7 @@
 package com.thetheobot.shelfplayer
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,8 +43,11 @@ import coil.compose.SubcomposeAsyncImage
 fun ItemDetailScreen(
     padding: PaddingValues,
     state: ItemDetailState,
+    selectedChapterId: String?,
+    playbackActionLabel: String,
+    playbackActionEnabled: Boolean,
     onBackClick: () -> Unit,
-    onPlayClick: (String) -> Unit,
+    onPlaybackAction: () -> Unit,
     onChapterSelected: (String) -> Unit,
     onRetry: () -> Unit,
 ) {
@@ -118,8 +122,11 @@ fun ItemDetailScreen(
                 item {
                     val firstChapter = detail.chapters.firstOrNull()
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(onClick = { onPlayClick(item.id) }) {
-                            Text("Play/Pause")
+                        Button(
+                            onClick = onPlaybackAction,
+                            enabled = playbackActionEnabled,
+                        ) {
+                            Text(playbackActionLabel)
                         }
                         OutlinedButton(
                             onClick = { firstChapter?.let { onChapterSelected(it.id) } },
@@ -151,6 +158,7 @@ fun ItemDetailScreen(
                     items(detail.chapters, key = { it.id }) { chapter ->
                         ChapterCard(
                             chapter = chapter,
+                            selected = chapter.id == selectedChapterId,
                             onChapterSelected = { onChapterSelected(chapter.id) },
                         )
                     }
@@ -254,16 +262,36 @@ private fun DetailDescription(description: String) {
 @Composable
 private fun ChapterCard(
     chapter: LibraryChapter,
+    selected: Boolean,
     onChapterSelected: () -> Unit,
 ) {
     Card(
-        colors = CardDefaults.elevatedCardColors(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            },
+        ),
+        border = if (selected) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+        } else {
+            null
+        },
         modifier = Modifier.clickable(onClick = onChapterSelected),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            if (selected) {
+                Text(
+                    "Ausgewählt",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
             Text(chapter.title, style = MaterialTheme.typography.titleMedium)
             val chapterRange = formatChapterRange(chapter.startSeconds, chapter.endSeconds)
             if (chapterRange.isNotBlank()) {
