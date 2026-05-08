@@ -531,7 +531,7 @@
 - Commit the settings-summary polish, push it, and update Story #10 with the commit hash plus GitHub Actions CI run link/status once the workflow finishes.
 
 ## 2026-05-08T15:15:17Z
-- Story/Issue: pending — Story: Bottom navigation spec alignment
+- Story/Issue: #11 — Story: Bottom navigation spec alignment
 - Implemented:
 - Added a `bottomNavigationTabs()` helper so the app shell renders the MVP bottom nav from a single filtered tab list.
 - Removed the visible Connect tab from the bottom navigation while keeping connection management available through Settings.
@@ -542,6 +542,7 @@
 - Local Android Gradle execution is blocked here because `java` is not installed in this environment.
 - Independent spec review: PASS
 - Independent code quality review: APPROVED
-- Commit(s): pending
+- Commit(s): `9b6f305` — feat: align bottom navigation with MVP spec
+- CI: GitHub Actions run `25563683528` (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25563683528
 - Next step:
-- Create or update the corresponding GitHub story issue, commit and push this slice, and link the commit hash plus GitHub Actions CI run back into the issue and implementation log.
+- Keep iterating on the next MVP slice while preserving the bottom-nav cleanup and connection shortcut behavior.
