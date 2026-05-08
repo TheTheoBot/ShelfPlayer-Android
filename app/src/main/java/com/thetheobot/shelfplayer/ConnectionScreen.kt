@@ -59,7 +59,7 @@ fun validateServerUrl(raw: String): String? {
     if (schemeSeparatorIndex >= 0) {
         val authorityRemainder = trimmed.substring(schemeSeparatorIndex + 3)
         if (authorityRemainder.isBlank() || authorityRemainder.all { it == '/' }) {
-            return "Server-URL braucht einen Hostnamen"
+            return "Server-URL braucht einen Hostnamen oder eine IP-Adresse"
         }
     }
 

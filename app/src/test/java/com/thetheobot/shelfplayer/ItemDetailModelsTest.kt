@@ -98,7 +98,7 @@ class ItemDetailModelsTest {
             "Kapitel 01 · 00:05 – 00:15",
             playerChapterContextDisplayText(
                 activeChapter = null,
-                selectedChapterLabel = "  Kapitel 01  ",
+                selectedChapterLabel = "  Kapitel 01 · 00:05 – 00:15  ",
             ),
         )
     }
