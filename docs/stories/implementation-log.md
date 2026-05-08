@@ -461,3 +461,14 @@
 - `e321265` — docs: log route-hardening run
 - Next step:
 - Continue with the next MVP slice after this route-hardening run is recorded.
+## 2026-05-08T11:30:44Z
+- Story/Issue: #7 — Story: Connection status shortcut in settings
+- Implemented:
+- Hardened the shared connection-session helper so whitespace-only stored server URLs now count as empty and displayed server URLs are trimmed/legacy-normalized before rendering.
+- Added regression coverage for whitespace-only server values in the app-root state helper path and trailing-slash normalization in the settings shortcut/status helpers.
+- Verification:
+- `git diff --check` ✅
+- `./gradlew testDebugUnitTest --tests com.thetheobot.shelfplayer.SettingsScreenTest --tests com.thetheobot.shelfplayer.AppRootStateTest --tests com.thetheobot.shelfplayer.ConnectionValidationTest` could not run locally because `java` is not installed in this environment.
+- Commit(s): pending
+- Next step:
+- Commit this slice, push it, and update Story #7 with the commit hash and CI result link.

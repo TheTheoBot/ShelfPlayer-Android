@@ -4,7 +4,7 @@ data class ConnectionSession(
     val savedConnection: ConnectionCredentials? = null,
 ) {
     val serverUrl: String
-        get() = savedConnection?.serverUrl.orEmpty()
+        get() = normalizeServerUrl(savedConnection?.serverUrl.orEmpty())
 
     val hasSavedServer: Boolean
         get() = serverUrl.isNotBlank()

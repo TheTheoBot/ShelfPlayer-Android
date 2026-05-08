@@ -45,7 +45,12 @@ class AppRootStateTest {
                 connectionStoreReady = true,
                 connectionInitFailed = false,
                 connectionLoadFailed = false,
-                connectionSession = ConnectionSession(),
+                connectionSession = ConnectionSession(
+                    ConnectionCredentials(
+                        serverUrl = "   ",
+                        accessToken = "token-123",
+                    ),
+                ),
             ),
         )
     }
@@ -121,18 +126,32 @@ class AppRootStateTest {
     }
 
     @Test
-    fun `connection session shows remembered server status when a server is saved`() {
-        assertEquals(
-            "Gespeicherter Server: https://books.example.com",
-            connectionSessionStatusText(
-                ConnectionSession(
-                    ConnectionCredentials(
-                        serverUrl = "https://books.example.com",
-                        accessToken = "token-123",
-                    ),
-                ),
+    fun `connection session treats whitespace server as missing`() {
+        val session = ConnectionSession(
+            ConnectionCredentials(
+                serverUrl = "   ",
+                accessToken = "token-123",
             ),
         )
+
+        assertEquals("Noch kein Server gespeichert", connectionSessionStatusText(session))
+        assertTrue(session.shouldShowOnboarding())
+    }
+
+    @Test
+    fun `connection session trims trailing slash from remembered server status`() {
+        val session = ConnectionSession(
+            ConnectionCredentials(
+                serverUrl = " https://books.example.com/ ",
+                accessToken = "token-123",
+            ),
+        )
+
+        assertEquals(
+            "Gespeicherter Server: https://books.example.com",
+            connectionSessionStatusText(session),
+        )
+        assertFalse(session.shouldShowOnboarding())
     }
 
     @Test

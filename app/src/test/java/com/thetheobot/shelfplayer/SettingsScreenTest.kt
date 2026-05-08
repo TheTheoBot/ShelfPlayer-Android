@@ -11,17 +11,28 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun `connect shortcut button label reflects saved connection state`() {
+    fun `connect shortcut button label reflects normalized saved connection state`() {
         assertEquals(
             "Verbindung einrichten",
             settingsConnectShortcutButtonLabel(ConnectionSession()),
+        )
+        assertEquals(
+            "Verbindung einrichten",
+            settingsConnectShortcutButtonLabel(
+                ConnectionSession(
+                    ConnectionCredentials(
+                        serverUrl = "   ",
+                        accessToken = "token-123",
+                    ),
+                ),
+            ),
         )
         assertEquals(
             "Connect öffnen",
             settingsConnectShortcutButtonLabel(
                 ConnectionSession(
                     ConnectionCredentials(
-                        serverUrl = "https://books.example.com",
+                        serverUrl = " https://books.example.com/ ",
                         accessToken = "token-123",
                     ),
                 ),
