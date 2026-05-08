@@ -132,7 +132,7 @@ private const val playbackProgressSyncIntervalMs = 30_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShelfPlayerApp(
+internal fun ShelfPlayerApp(
     launchState: AppLaunchState = AppLaunchState(route = null, eventId = 0, isDeepLink = false),
 ) {
     val context = LocalContext.current.applicationContext
