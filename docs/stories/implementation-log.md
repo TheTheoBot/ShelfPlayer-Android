@@ -610,3 +610,16 @@
   - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
   - `./gradlew testDebugUnitTest` could not run locally because Java is not installed in this environment (`java: not found`)
 - Next step: Push the slice and let GitHub Actions perform full build/test verification.
+
+## 2026-05-08T20:44:47Z
+- Story/Issue: #1 — Story: Harden connection onboarding URL validation
+- Story/Issue: #12 — Story: Active chapter context follows the playback item
+- Micro-task 1: Aligned the connection validator with the existing unit-test expectation for blank authorities so `https://` now returns the clearer hostname/IP error message.
+- Micro-task 2: Corrected the player chapter-context regression test to cover the real selected-chapter fallback label shape used by the app shell.
+- Micro-task 3: Appended this run to the implementation log so both the connection-validation and player-context fixes stay documented.
+- Verification:
+  - `git diff --check` ✅
+  - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
+  - Local Gradle execution is still blocked here because Java is not installed in this environment.
+- Commit(s): `d5b7505` — fix: align validation and chapter context fallback
+- Next step: Commit the docs update, push the branch, and use GitHub Actions to confirm the Android unit tests are green.
