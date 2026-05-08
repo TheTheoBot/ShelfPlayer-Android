@@ -320,7 +320,7 @@
 - Independent code quality review: APPROVED
 - GitHub issue: https://github.com/TheTheoBot/ShelfPlayer-Android/issues/7
 - Commit(s):
-- `13ec50b` — feat: add settings connection shortcut
+- `61acbd1` — feat: add settings connection shortcut
 - Next step:
 - Push the settings slice, then add the GitHub issue comment with the final commit hash and CI run link for Story #7.
 
