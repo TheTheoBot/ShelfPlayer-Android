@@ -268,3 +268,19 @@
 - `0384c96` — feat: harden search clear flow
 - Next step:
 - Commit the implementation-log update, push to GitHub, watch the Android Actions run, and add the commit hash + CI link back onto Story #6.
+
+## 2026-05-08T00:29:34Z
+- Story/Issue: #6 — Story: Search within active library and navigate to detail
+- Implemented:
+- Added JVM regression coverage for the search helper layer: query normalization, result-count titles, blank-error fallback text, clear-action availability, refresh-error detection, tokenized library filtering, and stale submission invalidation.
+- Kept the existing search UI flow intact while reinforcing the MVP search slice with test coverage for the reusable helper logic.
+- Verification:
+- `git diff --check --cached` ✅
+- Static diff scan: no secrets / shell injection / eval / pickle / SQL injection matches
+- Local Gradle execution is still blocked here because `java` is not installed in this environment.
+- Independent spec review: PASS
+- Independent code quality review: APPROVED
+- Commit(s):
+- `23e03d7` — fix: compile search clear helper branches
+- Next step:
+- Commit and push the test + log update, then post the commit hash and GitHub Actions run link back onto Story #6.
