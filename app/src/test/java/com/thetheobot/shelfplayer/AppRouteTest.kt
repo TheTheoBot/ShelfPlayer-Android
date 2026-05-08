@@ -22,6 +22,26 @@ class AppRouteTest {
     }
 
     @Test
+    fun `route parser ignores query and fragment suffixes`() {
+        assertEquals(
+            AppRoute.Player,
+            parseInternalAppRoute("player?foo=bar"),
+        )
+        assertEquals(
+            AppRoute.Player,
+            parseInternalAppRoute("player#section"),
+        )
+        assertEquals(
+            AppRoute.ItemDetail(itemId = "abc123"),
+            parseInternalAppRoute("item/abc123?foo=bar"),
+        )
+        assertEquals(
+            AppRoute.ItemDetail(itemId = "abc123"),
+            parseInternalAppRoute("item/abc123#section"),
+        )
+    }
+
+    @Test
     fun `route parser trims whitespace and leading slashes`() {
         assertEquals(
             AppRoute.Player,
@@ -49,9 +69,15 @@ class AppRouteTest {
         assertNull(parseInternalAppRoute("item"))
         assertNull(parseInternalAppRoute("item/"))
         assertNull(parseInternalAppRoute("player/extra"))
+        assertNull(parseInternalAppRoute("player/extra?foo=bar"))
         assertNull(parseInternalAppRoute("items/abc123"))
         assertNull(parseInternalAppRoute("Player"))
         assertNull(parseInternalAppRoute("/item/abc123/extra"))
+        assertNull(parseInternalAppRoute("/item/abc123/extra#section"))
         assertNull(parseInternalAppRoute("/item/abc%2F123"))
+        assertNull(parseInternalAppRoute("/item/abc%"))
+        assertNull(parseInternalAppRoute("/item/abc%2"))
+        assertNull(parseInternalAppRoute("/item/abc%GG"))
+        assertNull(parseInternalAppRoute("/item/abc%C3%28"))
     }
 }

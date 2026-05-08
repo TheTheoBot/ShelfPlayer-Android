@@ -1,6 +1,9 @@
 package com.thetheobot.shelfplayer
 
 import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
+import java.nio.charset.CodingErrorAction
+import java.nio.charset.CharacterCodingException
 
 sealed interface AppRoute {
     data class ItemDetail(
@@ -11,10 +14,7 @@ sealed interface AppRoute {
 }
 
 internal fun parseInternalAppRoute(route: String?): AppRoute? {
-    val normalizedRoute = route
-        ?.trim()
-        ?.trimStart('/')
-        .orEmpty()
+    val normalizedRoute = normalizeInternalRoute(route)
 
     if (normalizedRoute.isBlank()) {
         return null
@@ -40,16 +40,34 @@ internal fun parseInternalAppRoute(route: String?): AppRoute? {
     }
 }
 
+private fun normalizeInternalRoute(route: String?): String {
+    val trimmedRoute = route?.trim()?.trimStart('/').orEmpty()
+    val suffixStart = trimmedRoute.indexOfAny(charArrayOf('?', '#'))
+    return if (suffixStart >= 0) trimmedRoute.substring(0, suffixStart) else trimmedRoute
+}
+
 private fun decodePercentEncodedPathSegment(segment: String): String? {
     val decoded = StringBuilder(segment.length)
     val bytes = ByteArrayOutputStream(segment.length)
     var index = 0
 
-    fun flushBytes() {
-        if (bytes.size() > 0) {
-            decoded.append(String(bytes.toByteArray(), Charsets.UTF_8))
-            bytes.reset()
+    fun flushBytes(): Boolean {
+        if (bytes.size() == 0) {
+            return true
         }
+
+        val decodedBytes = try {
+            Charsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(bytes.toByteArray()))
+        } catch (_: CharacterCodingException) {
+            return false
+        }
+
+        decoded.append(decodedBytes)
+        bytes.reset()
+        return true
     }
 
     while (index < segment.length) {
@@ -67,12 +85,16 @@ private fun decodePercentEncodedPathSegment(segment: String): String? {
             bytes.write((high shl 4) + low)
             index += 3
         } else {
-            flushBytes()
+            if (!flushBytes()) {
+                return null
+            }
             decoded.append(current)
             index++
         }
     }
 
-    flushBytes()
+    if (!flushBytes()) {
+        return null
+    }
     return decoded.toString()
 }
