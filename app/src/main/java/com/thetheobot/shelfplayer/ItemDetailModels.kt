@@ -107,8 +107,8 @@ internal fun resolvePlayerSelectedChapterContext(
         return PlayerSelectedChapterContext(label = null, startSeconds = null)
     }
 
-    val selectedChapterLabel = playbackLibraryItemDetail.chapters.let { chapters ->
-        selectedChapterId?.let { chapterId -> selectedChapterDisplayLabel(chapters, chapterId) }
+    val selectedChapterLabel = playbackLibraryItemDetail?.chapters.let { chapters ->
+        selectedChapterId?.let { chapterId -> selectedChapterDisplayLabel(chapters.orEmpty(), chapterId) }
     }
 
     return PlayerSelectedChapterContext(
