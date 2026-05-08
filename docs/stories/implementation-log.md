@@ -576,5 +576,5 @@
 |  - `./gradlew testDebugUnitTest --tests com.thetheobot.shelfplayer.ItemDetailModelsTest` could not run locally because Java is not installed in this environment (`java: not found`)
 |  - Independent spec review: PASS
 |  - Independent code quality review: APPROVED
-|- Commit(s): pending
+|- Commit(s): `6d7c783` — feat: centralize player chapter context gating
 |- Next step: Commit, push, and post the GitHub issue comment with the final commit hash and CI run link/status once GitHub Actions finishes.
