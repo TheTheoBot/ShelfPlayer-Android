@@ -109,6 +109,18 @@ class SearchModelsTest {
         assertTrue(shouldStartSearchRequest("project"))
     }
 
+    @Test
+    fun `search request helper treats whitespace normalized active query as duplicate`() {
+        assertFalse(shouldStartSearchRequest("project", activeSearchQuery = "  project  "))
+        assertFalse(
+            shouldAutoSubmitSearch(
+                "project",
+                SearchState.Typing(query = "project"),
+                activeSearchQuery = "  project  ",
+            ),
+        )
+    }
+
     private fun assertStateAction(
         state: SearchState,
         canClear: Boolean,
