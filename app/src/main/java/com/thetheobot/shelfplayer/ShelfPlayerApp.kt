@@ -28,6 +28,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -337,6 +338,17 @@ internal fun ShelfPlayerApp(
         clearPlaybackStateWithoutSync()
     }
 
+    fun resetToLibraryRootForConnectionChange() {
+        releasePlayback()
+        selectedTab = AppTab.Library
+        selectedLibraryItemId = null
+        selectedLibraryItemDetailState = ItemDetailState.Loading
+        selectedLibraryItemDetailReloadKey++
+        selectedChapterId = null
+        selectedChapterStartSeconds = null
+        playbackError = null
+    }
+
     fun flushPlaybackProgressOnDispose() {
         val activeItemId = playbackActiveItemId
         if (activeItemId != null && playbackDurationMs > 0) {
@@ -581,10 +593,13 @@ internal fun ShelfPlayerApp(
         selectedChapterStartSeconds = null
     }
 
-    val selectedChapterLabel = (selectedLibraryItemDetailState as? ItemDetailState.Loaded)
+    val selectedLibraryItemDetail = selectedLibraryItemDetailState as? ItemDetailState.Loaded
+    val selectedChapterLabel = selectedLibraryItemDetail
         ?.detail
         ?.chapters
         ?.let { chapters -> selectedChapterId?.let { chapterId -> selectedChapterDisplayLabel(chapters, chapterId) } }
+    val selectedChapterContextMatchesActivePlaybackItem =
+        playbackActiveItemId == null || playbackActiveItemId == selectedLibraryItemDetail?.detail?.item?.id
 
     LaunchedEffect(selectedLibraryItemId, selectedLibraryItemDetailReloadKey) {
         val itemId = selectedLibraryItemId ?: return@LaunchedEffect
@@ -661,8 +676,8 @@ internal fun ShelfPlayerApp(
                         }.getOrDefault(false).also { saved ->
                             if (saved) {
                                 connectionLoadFailed = false
+                                resetToLibraryRootForConnectionChange()
                                 rememberedConnection = savedConnection
-                                selectedTab = AppTab.Library
                             }
                         }
                     },
@@ -707,6 +722,7 @@ internal fun ShelfPlayerApp(
                     when (backNavigation) {
                         AppBackNavigation.CloseItemDetail -> {
                             selectedTab = AppTab.Library
+                            selectedLibraryItemDetailState = ItemDetailState.Loading
                             selectedLibraryItemId = null
                             selectedChapterId = null
                             selectedChapterStartSeconds = null
@@ -772,6 +788,7 @@ internal fun ShelfPlayerApp(
                                     playbackActionLabel = playbackActionLabelFor(currentItemId),
                                     playbackActionEnabled = playbackActionEnabledFor(currentItemId),
                                     onBackClick = {
+                                        selectedLibraryItemDetailState = ItemDetailState.Loading
                                         selectedLibraryItemId = null
                                         selectedChapterId = null
                                         selectedChapterStartSeconds = null
@@ -843,24 +860,38 @@ internal fun ShelfPlayerApp(
                                 }.getOrDefault(false).also { saved ->
                                     if (saved) {
                                         connectionLoadFailed = false
+                                        resetToLibraryRootForConnectionChange()
                                         rememberedConnection = savedConnection
-                                        selectedTab = AppTab.Library
                                     }
                                 }
                             },
                         )
                         AppTab.Player -> {
                             val activePlaybackItem = (playbackActiveItemId ?: selectedLibraryItemId)?.let { resolveLibraryItem(it) }
-                            val activePlaybackChapters = (selectedLibraryItemDetailState as? ItemDetailState.Loaded)
-                                ?.detail
-                                ?.chapters
-                                .orEmpty()
+                            val selectedLibraryItemChapters = if (selectedChapterContextMatchesActivePlaybackItem) {
+                                (selectedLibraryItemDetailState as? ItemDetailState.Loaded)
+                                    ?.detail
+                                    ?.chapters
+                                    .orEmpty()
+                            } else {
+                                emptyList()
+                            }
+                            val playerSelectedChapterLabel = if (selectedChapterContextMatchesActivePlaybackItem) {
+                                selectedChapterLabel
+                            } else {
+                                null
+                            }
+                            val playerSelectedChapterStartSeconds = if (selectedChapterContextMatchesActivePlaybackItem) {
+                                selectedChapterStartSeconds
+                            } else {
+                                null
+                            }
                             val playbackResumeHint = activePlaybackItem?.id?.let { summarizeLatestPlaybackProgress(it, latestPlaybackProgress) }
                             PlayerScreen(
                                 padding = padding,
                                 activeLibraryItem = activePlaybackItem,
-                                selectedChapterLabel = selectedChapterLabel,
-                                selectedChapterStartSeconds = selectedChapterStartSeconds,
+                                selectedChapterLabel = playerSelectedChapterLabel,
+                                selectedChapterStartSeconds = playerSelectedChapterStartSeconds,
                                 playbackResumeHint = playbackResumeHint,
                                 isPreparingPlayback = isPreparingPlayback,
                                 isPlayingPlayback = isPlayingPlayback,
@@ -869,10 +900,10 @@ internal fun ShelfPlayerApp(
                                 playbackError = playbackError,
                                 playbackDurationMs = playbackDurationMs,
                                 playbackPositionMs = playbackPositionMs,
-                                chapterQuickAccess = activePlaybackChapters,
+                                chapterQuickAccess = selectedLibraryItemChapters,
                                 onPlay = {
                                     activePlaybackItem?.id?.let { itemId ->
-                                        startPlayback(itemId, selectedChapterStartSeconds)
+                                        startPlayback(itemId, playerSelectedChapterStartSeconds)
                                     }
                                 },
                                 onPauseResume = {
@@ -946,6 +977,7 @@ private fun PlayerScreen(
     } else {
         playbackPositionMs
     }
+    val activeQuickAccessChapter = resolveActiveChapterForPlaybackPosition(chapterQuickAccess, displayedPositionMs)
 
     Column(
         modifier = Modifier
@@ -990,6 +1022,26 @@ private fun PlayerScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        Surface(
+            modifier = Modifier.fillMaxWidth(0.9f),
+            shape = MaterialTheme.shapes.medium,
+            tonalElevation = 2.dp,
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    "Kapitel-Kontext",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    "Aktuelles Kapitel: ${activeChapterDisplayLabel(activeQuickAccessChapter)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         }
         playbackResumeHint?.let { hint ->
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -1041,11 +1093,21 @@ private fun PlayerScreen(
                 Text("Kapitel-Quick-Access", style = MaterialTheme.typography.titleSmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     chapterQuickAccess.take(4).forEach { chapter ->
-                        OutlinedButton(
-                            onClick = { onChapterSelected(chapter) },
-                            enabled = !isPreparingPlayback,
-                        ) {
-                            Text(chapter.title)
+                        val isActiveChapter = chapter.id == activeQuickAccessChapter?.id
+                        if (isActiveChapter) {
+                            Button(
+                                onClick = { onChapterSelected(chapter) },
+                                enabled = !isPreparingPlayback,
+                            ) {
+                                Text(chapter.title)
+                            }
+                        } else {
+                            OutlinedButton(
+                                onClick = { onChapterSelected(chapter) },
+                                enabled = !isPreparingPlayback,
+                            ) {
+                                Text(chapter.title)
+                            }
                         }
                     }
                 }

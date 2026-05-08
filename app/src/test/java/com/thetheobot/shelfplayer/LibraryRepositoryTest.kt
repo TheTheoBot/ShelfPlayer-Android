@@ -342,6 +342,46 @@ class LibraryRepositoryTest {
                 selectedChapterId = "chapter-unknown",
             ),
         )
+        assertEquals(
+            "Intro · 00:00 – 02:00",
+            activeChapterDisplayLabel(
+                LibraryChapter(id = "chapter-1", title = "Intro", startSeconds = 0, endSeconds = 120),
+            ),
+        )
+        assertEquals("Kein Kapitel an dieser Position", activeChapterDisplayLabel(null))
+    }
+
+    @Test
+    fun `chapter helper resolves the active chapter for playback position`() {
+        val chapters = listOf(
+            LibraryChapter(id = "chapter-1", title = "Intro", startSeconds = 0, endSeconds = 120),
+            LibraryChapter(id = "chapter-2", title = "Middle", startSeconds = 120, endSeconds = 240),
+            LibraryChapter(id = "chapter-3", title = "Outro", startSeconds = 240, endSeconds = null),
+        )
+
+        assertEquals("chapter-1", resolveActiveChapterForPlaybackPosition(chapters, 42_000)?.id)
+        assertEquals("chapter-2", resolveActiveChapterForPlaybackPosition(chapters, 120_000)?.id)
+        assertEquals(null, resolveActiveChapterForPlaybackPosition(chapters, -1))
+        assertEquals(
+            "chapter-later",
+            resolveActiveChapterForPlaybackPosition(
+                chapters = listOf(
+                    LibraryChapter(id = "chapter-missing", title = "Missing", startSeconds = null, endSeconds = 60),
+                    LibraryChapter(id = "chapter-later", title = "Later", startSeconds = 60, endSeconds = 120),
+                ),
+                playbackPositionMs = 75_000,
+            )?.id,
+        )
+        assertEquals(
+            null,
+            resolveActiveChapterForPlaybackPosition(
+                chapters = listOf(
+                    LibraryChapter(id = "chapter-missing", title = "Missing", startSeconds = null, endSeconds = 60),
+                    LibraryChapter(id = "chapter-later", title = "Later", startSeconds = 60, endSeconds = 120),
+                ),
+                playbackPositionMs = 30_000,
+            ),
+        )
     }
 
     @Test

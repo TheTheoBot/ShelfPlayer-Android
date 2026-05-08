@@ -88,6 +88,63 @@ internal fun selectedChapterDisplayLabel(
     ).joinToString(" · ").ifBlank { "Ausgewähltes Kapitel" }
 }
 
+internal fun activeChapterDisplayLabel(chapter: LibraryChapter?): String {
+    val resolvedChapter = chapter ?: return "Kein Kapitel an dieser Position"
+    val chapterRange = formatChapterRange(resolvedChapter.startSeconds, resolvedChapter.endSeconds)
+
+    return listOfNotNull(
+        resolvedChapter.title.trim().takeIf { it.isNotBlank() } ?: "Unbenanntes Kapitel",
+        chapterRange.takeIf { it.isNotBlank() },
+    ).joinToString(" · ")
+}
+
+internal fun resolveActiveChapterForPlaybackPosition(
+    chapters: List<LibraryChapter>,
+    playbackPositionMs: Int,
+): LibraryChapter? {
+    if (playbackPositionMs < 0) {
+        return null
+    }
+
+    val validChapters = chapters.mapIndexedNotNull { index, chapter ->
+        val startSeconds = chapter.startSeconds?.coerceAtLeast(0) ?: return@mapIndexedNotNull null
+        ChapterWithStart(index = index, chapter = chapter, startMs = startSeconds.toLong() * 1000L)
+    }.sortedWith(
+        compareBy<ChapterWithStart> { it.startMs }
+            .thenBy { it.index },
+    )
+
+    if (validChapters.isEmpty()) {
+        return null
+    }
+
+    val playbackPositionMsLong = playbackPositionMs.toLong()
+
+    validChapters.forEachIndexed { index, current ->
+        val nextStartMs = validChapters.getOrNull(index + 1)?.startMs
+        val chapterEndMs = current.chapter.endSeconds
+            ?.coerceAtLeast(0)
+            ?.toLong()
+            ?.times(1000L)
+            ?.let { endMs -> nextStartMs?.let { minOf(endMs, it) } ?: endMs }
+            ?: nextStartMs
+
+        val isWithinChapter = playbackPositionMsLong >= current.startMs &&
+            (chapterEndMs == null || playbackPositionMsLong < chapterEndMs)
+        if (isWithinChapter) {
+            return current.chapter
+        }
+    }
+
+    return null
+}
+
+private data class ChapterWithStart(
+    val index: Int,
+    val chapter: LibraryChapter,
+    val startMs: Long,
+)
+
 private fun formatChapterTime(seconds: Int): String {
     val clampedSeconds = seconds.coerceAtLeast(0)
     val minutes = clampedSeconds / 60
