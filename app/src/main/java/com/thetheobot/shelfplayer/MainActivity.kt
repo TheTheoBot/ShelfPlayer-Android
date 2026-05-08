@@ -8,7 +8,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            ShelfPlayerApp(initialRoute = parseInternalAppRoute(intent?.data?.path))
+            ShelfPlayerApp(initialRoute = parseInternalAppRoute(intent?.data?.encodedPath ?: intent?.data?.path))
         }
     }
 }

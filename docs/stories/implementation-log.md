@@ -361,3 +361,16 @@
 - Commit(s): `c42f7f8` (feature), `3c12c84` (merge on main)
 - Next step:
 - Continue with the next MVP slice after this route foundation is merged and monitored in CI.
+
+## 2026-05-08T04:41:54Z
+- Story/Issue: #8 — Story: Internal route foundation for item detail and player
+- Implemented:
+- Hardened the internal route parser to trim whitespace, ignore any number of leading slashes, decode percent-encoded item path segments, and still reject malformed or extra-segment routes.
+- Updated `MainActivity` to prefer `intent?.data?.encodedPath` with a fallback to `path` so launch routing can preserve encoded path data when available.
+- Added focused regression coverage for whitespace/leading-slash normalization, percent-decoded item ids, and malformed route rejection.
+- Verification:
+- `git diff --check` ✅
+- `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
+- Commit(s): pending
+- Next step:
+- Commit the route parser + test + log update, then keep monitoring Story #8 in CI without changing GitHub issues yet.

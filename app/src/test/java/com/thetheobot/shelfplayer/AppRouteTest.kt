@@ -22,6 +22,26 @@ class AppRouteTest {
     }
 
     @Test
+    fun `route parser trims whitespace and leading slashes`() {
+        assertEquals(
+            AppRoute.Player,
+            parseInternalAppRoute("  ///player  "),
+        )
+        assertEquals(
+            AppRoute.ItemDetail(itemId = "abc123"),
+            parseInternalAppRoute("\n//item/abc123\t"),
+        )
+    }
+
+    @Test
+    fun `route parser decodes encoded item path segments`() {
+        assertEquals(
+            AppRoute.ItemDetail(itemId = "abc 123"),
+            parseInternalAppRoute("/item/abc%20123"),
+        )
+    }
+
+    @Test
     fun `unsupported or malformed routes return null`() {
         assertNull(parseInternalAppRoute(null))
         assertNull(parseInternalAppRoute(""))
@@ -31,5 +51,7 @@ class AppRouteTest {
         assertNull(parseInternalAppRoute("player/extra"))
         assertNull(parseInternalAppRoute("items/abc123"))
         assertNull(parseInternalAppRoute("Player"))
+        assertNull(parseInternalAppRoute("/item/abc123/extra"))
+        assertNull(parseInternalAppRoute("/item/abc%2F123"))
     }
 }
