@@ -452,7 +452,12 @@
 - `git diff --check` ✅
 - Static diff scan: no secrets / shell injection / eval / pickle / SQL injection matches
 - Local Gradle execution remains blocked here because `java` is not installed in this environment.
+- GitHub Actions run `25551289981` (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25551289981
+- GitHub Actions run `25551289977` (Android Debug Build) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25551289977
+- GitHub Actions run `25551289979` (Android APK) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25551289979
+- GitHub Actions run `25551289998` (Android Unit Tests) — failure: `ConnectionValidationTest` assertions around `validateServerUrl` (pre-existing blocker)
 - Commit(s):
 - `00691ce` — feat: harden internal route parsing
+- `e321265` — docs: log route-hardening run
 - Next step:
-- Commit, push, and update Story #8 with the final commit hash and CI run link/status.
+- Continue with the next MVP slice after this route-hardening run is recorded.
