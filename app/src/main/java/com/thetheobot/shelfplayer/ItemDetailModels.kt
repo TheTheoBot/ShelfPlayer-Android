@@ -58,6 +58,25 @@ internal fun itemDetailStateMessage(state: ItemDetailState): String {
     }
 }
 
+internal data class ItemDetailActionCopy(
+    val primaryActionLabel: String,
+    val showChapterStartAction: Boolean,
+    val chapterStartActionEnabled: Boolean,
+)
+
+internal fun itemDetailActionCopy(
+    playbackActionLabel: String,
+    hasChapters: Boolean,
+): ItemDetailActionCopy {
+    val primaryActionLabel = playbackActionLabel.trim().ifBlank { "Abspielen" }
+
+    return ItemDetailActionCopy(
+        primaryActionLabel = primaryActionLabel,
+        showChapterStartAction = hasChapters,
+        chapterStartActionEnabled = hasChapters,
+    )
+}
+
 internal fun formatChapterRange(startSeconds: Int?, endSeconds: Int?): String {
     val start = startSeconds?.let(::formatChapterTime).orEmpty()
     val end = endSeconds?.let(::formatChapterTime).orEmpty()

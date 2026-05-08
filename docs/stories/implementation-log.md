@@ -343,13 +343,13 @@
 - Next step:
 - Continue with the next MVP slice only if new CI feedback exposes a regression; otherwise move on.
 
-## 2026-05-08T04:05:00Z
+## 2026-05-08T06:23:55Z
 - Story/Issue: #8 — Story: Internal route foundation for item detail and player
 - Implemented:
-- Added a pure internal route parser plus a small launch-selection helper for item detail and player destinations.
-- Wired `MainActivity` and `ShelfPlayerApp` to accept an optional initial route so the app can open the right tab/detail state on launch.
-- Added a minimal manifest deep-link filter for `shelfplayer://app/player` and `shelfplayer://app/item/*`.
-- Added unit tests for both the route parser and the launch-selection helper.
+- Micro-task 1: Added a pure internal route parser plus a small launch-selection helper for item detail and player destinations.
+- Micro-task 2: Wired `MainActivity` and `ShelfPlayerApp` to accept an optional initial route so the app can open the right tab/detail state on launch.
+- Micro-task 3: Added a minimal manifest deep-link filter for `shelfplayer://app/player` and `shelfplayer://app/item/*`.
+- Micro-task 4: Added unit tests for both the route parser and the launch-selection helper.
 - Verification:
 - `git diff --check` ✅
 - `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
@@ -361,6 +361,19 @@
 - Commit(s): `c42f7f8` (feature), `3c12c84` (merge on main)
 - Next step:
 - Continue with the next MVP slice after this route foundation is merged and monitored in CI.
+
+## 2026-05-08T21:28:27Z
+- Story/Issue: #13 — Story: Player state transparency helper
+- Implemented:
+- Micro-task 1: Added a pure `playerStateStatusText` helper in `ShelfPlayerApp.kt` to summarize loading, playing, paused/ready, and error player states with concise user-facing copy.
+- Micro-task 2: Surfaced that status copy in `PlayerScreen` as a compact elevated surface above the main player content without changing playback controls or resume logic.
+- Micro-task 3: Added focused JVM regression coverage in `ShelfPlayerAppTest.kt` for loading, playing, paused, ready, and error-precedence behavior.
+- Micro-task 4: Logged this run in the implementation log to keep the MVP slice history current.
+- Verification:
+- `git diff --check` ✅
+- Local Gradle unit test execution was not available yet in this environment because Java is not installed.
+- Next step:
+- Run the focused Android unit test task in CI, then continue with any follow-up player UX polish only if the new status copy needs refinement.
 
 ## 2026-05-08T04:41:54Z
 - Story/Issue: #8 — Story: Internal route foundation for item detail and player

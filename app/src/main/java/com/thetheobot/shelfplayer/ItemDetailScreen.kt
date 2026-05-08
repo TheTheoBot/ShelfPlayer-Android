@@ -26,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -113,6 +114,11 @@ fun ItemDetailScreen(
             is ItemDetailState.Loaded -> {
                 val detail = state.detail
                 val item = detail.item
+                val actionCopy = itemDetailActionCopy(
+                    playbackActionLabel = playbackActionLabel,
+                    hasChapters = detail.chapters.isNotEmpty(),
+                )
+                val firstChapter = detail.chapters.firstOrNull()
                 item {
                     DetailHeader(item = item)
                 }
@@ -120,22 +126,26 @@ fun ItemDetailScreen(
                     DetailDescription(description = detail.description)
                 }
                 item {
-                    val firstChapter = detail.chapters.firstOrNull()
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Button(
                             onClick = onPlaybackAction,
                             enabled = playbackActionEnabled,
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(playbackActionLabel)
+                            Text(actionCopy.primaryActionLabel)
                         }
-                        OutlinedButton(
-                            onClick = { firstChapter?.let { onChapterSelected(it.id) } },
-                            enabled = firstChapter != null,
-                        ) {
-                            Text("Ab hier abspielen")
-                        }
-                        OutlinedButton(onClick = onBackClick) {
-                            Text("Zurück")
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (actionCopy.showChapterStartAction) {
+                                OutlinedButton(
+                                    onClick = { firstChapter?.let { onChapterSelected(it.id) } },
+                                    enabled = actionCopy.chapterStartActionEnabled,
+                                ) {
+                                    Text("Ab hier abspielen")
+                                }
+                            }
+                            TextButton(onClick = onBackClick) {
+                                Text("Zurück")
+                            }
                         }
                     }
                 }

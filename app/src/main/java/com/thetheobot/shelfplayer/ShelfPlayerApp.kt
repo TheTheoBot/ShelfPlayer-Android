@@ -143,6 +143,21 @@ internal fun resolvePlaybackFlushPositionMs(
     return (mediaPlayerPositionMs ?: playbackPositionMs).coerceAtLeast(0)
 }
 
+internal fun playerStateStatusText(
+    isPreparingPlayback: Boolean,
+    isPlayingPlayback: Boolean,
+    hasActivePlaybackItem: Boolean,
+    playbackError: String?,
+): String {
+    return when {
+        !playbackError.isNullOrBlank() -> "Fehler"
+        isPreparingPlayback -> "Lädt…"
+        isPlayingPlayback -> "Wiedergabe läuft"
+        hasActivePlaybackItem -> "Pausiert"
+        else -> "Bereit"
+    }
+}
+
 private val playbackRateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
 private const val playbackPrepareTimeoutMs = 15_000L
 private const val playbackProgressSyncIntervalMs = 30_000L
@@ -910,6 +925,7 @@ internal fun ShelfPlayerApp(
                                 playbackResumeHint = playbackResumeHint,
                                 isPreparingPlayback = isPreparingPlayback,
                                 isPlayingPlayback = isPlayingPlayback,
+                                hasActivePlaybackItem = playbackActiveItemId != null,
                                 playbackRate = playbackRate,
                                 skipIntervalSeconds = appSettings.playbackSkipIntervalSeconds,
                                 playbackError = playbackError,
@@ -962,6 +978,7 @@ private fun PlayerScreen(
     playbackResumeHint: String?,
     isPreparingPlayback: Boolean,
     isPlayingPlayback: Boolean,
+    hasActivePlaybackItem: Boolean,
     playbackRate: Float,
     skipIntervalSeconds: Int,
     playbackError: String?,
@@ -993,6 +1010,12 @@ private fun PlayerScreen(
         playbackPositionMs
     }
     val activeQuickAccessChapter = resolveActiveChapterForPlaybackPosition(chapterQuickAccess, displayedPositionMs)
+    val playerStatusText = playerStateStatusText(
+        isPreparingPlayback = isPreparingPlayback,
+        isPlayingPlayback = isPlayingPlayback,
+        hasActivePlaybackItem = hasActivePlaybackItem,
+        playbackError = playbackError,
+    )
 
     Column(
         modifier = Modifier
@@ -1003,6 +1026,17 @@ private fun PlayerScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("Now Playing", style = MaterialTheme.typography.labelLarge)
+        Surface(
+            modifier = Modifier.fillMaxWidth(0.9f),
+            shape = MaterialTheme.shapes.medium,
+            tonalElevation = 2.dp,
+        ) {
+            Text(
+                playerStatusText,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
 
         if (activeLibraryItem == null) {
             Text(

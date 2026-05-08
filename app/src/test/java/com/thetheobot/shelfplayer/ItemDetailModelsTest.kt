@@ -208,4 +208,36 @@ class ItemDetailModelsTest {
         assertNull(selectedChapterDisplayLabel(chapters, "   "))
         assertEquals("Ausgewähltes Kapitel", selectedChapterDisplayLabel(chapters, "missing-id"))
     }
+
+    @Test
+    fun `item detail action copy keeps playback label primary and chapter start secondary only when chapters exist`() {
+        val withChapters = itemDetailActionCopy(
+            playbackActionLabel = " Abspielen ",
+            hasChapters = true,
+        )
+        val withoutChapters = itemDetailActionCopy(
+            playbackActionLabel = "Lädt…",
+            hasChapters = false,
+        )
+
+        assertEquals("Abspielen", withChapters.primaryActionLabel)
+        assertEquals(true, withChapters.showChapterStartAction)
+        assertEquals(true, withChapters.chapterStartActionEnabled)
+
+        assertEquals("Lädt…", withoutChapters.primaryActionLabel)
+        assertEquals(false, withoutChapters.showChapterStartAction)
+        assertEquals(false, withoutChapters.chapterStartActionEnabled)
+    }
+
+    @Test
+    fun `item detail action copy falls back to a safe primary label when playback copy is blank`() {
+        val copy = itemDetailActionCopy(
+            playbackActionLabel = "   ",
+            hasChapters = true,
+        )
+
+        assertEquals("Abspielen", copy.primaryActionLabel)
+        assertEquals(true, copy.showChapterStartAction)
+        assertEquals(true, copy.chapterStartActionEnabled)
+    }
 }
