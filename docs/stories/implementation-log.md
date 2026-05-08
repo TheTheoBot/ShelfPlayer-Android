@@ -557,6 +557,7 @@
 - `git diff --check` ✅
 - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
 - Local Android Gradle execution is blocked here because Java is not installed in this environment.
+- GitHub Actions run `25567069136` (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25567069136
 - Independent spec review: PASS
 - Independent code quality review: APPROVED
 - Commit(s): `a22c45b` — feat: refine player chapter context
