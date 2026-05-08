@@ -98,6 +98,28 @@ internal fun activeChapterDisplayLabel(chapter: LibraryChapter?): String {
     ).joinToString(" · ")
 }
 
+internal fun activeChapterContextDisplayText(chapter: LibraryChapter?): String {
+    return "Aktuelles Kapitel: ${activeChapterDisplayLabel(chapter)}"
+}
+
+internal fun isSelectedChapterContextActivePlaybackItem(
+    playbackActiveItemId: String?,
+    selectedItemId: String?,
+): Boolean {
+    val activeItemId = playbackActiveItemId?.trim().orEmpty()
+    val resolvedSelectedItemId = selectedItemId?.trim().orEmpty()
+    return activeItemId.isNotBlank() && activeItemId == resolvedSelectedItemId
+}
+
+internal fun shouldResetSelectedChapterContext(
+    previousPlaybackItemId: String?,
+    currentPlaybackItemId: String?,
+): Boolean {
+    val previousItemId = previousPlaybackItemId?.trim().orEmpty()
+    val currentItemId = currentPlaybackItemId?.trim().orEmpty()
+    return previousItemId.isNotBlank() && previousItemId != currentItemId
+}
+
 internal fun resolveActiveChapterForPlaybackPosition(
     chapters: List<LibraryChapter>,
     playbackPositionMs: Int,

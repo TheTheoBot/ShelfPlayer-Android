@@ -1,0 +1,107 @@
+package com.thetheobot.shelfplayer
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+class ItemDetailModelsTest {
+    @Test
+    fun `resolve active chapter returns matching chapter for in range playback positions`() {
+        val chapters = listOf(
+            LibraryChapter(id = "chapter-b", title = "Chapter B", startSeconds = 60, endSeconds = 120),
+            LibraryChapter(id = "chapter-a", title = "Chapter A", startSeconds = 0, endSeconds = 70),
+            LibraryChapter(id = "chapter-c", title = "Chapter C", startSeconds = 120, endSeconds = 180),
+        )
+
+        assertEquals("chapter-a", resolveActiveChapterForPlaybackPosition(chapters, 30_000)?.id)
+        assertEquals("chapter-b", resolveActiveChapterForPlaybackPosition(chapters, 75_000)?.id)
+        assertEquals("chapter-c", resolveActiveChapterForPlaybackPosition(chapters, 150_000)?.id)
+    }
+
+    @Test
+    fun `resolve active chapter respects chapter end and next chapter start boundaries`() {
+        val chapters = listOf(
+            LibraryChapter(id = "chapter-b", title = "Chapter B", startSeconds = 60, endSeconds = 120),
+            LibraryChapter(id = "chapter-a", title = "Chapter A", startSeconds = 0, endSeconds = 70),
+            LibraryChapter(id = "chapter-c", title = "Chapter C", startSeconds = 120, endSeconds = 180),
+        )
+
+        assertEquals("chapter-a", resolveActiveChapterForPlaybackPosition(chapters, 59_999)?.id)
+        assertEquals("chapter-b", resolveActiveChapterForPlaybackPosition(chapters, 60_000)?.id)
+        assertEquals("chapter-b", resolveActiveChapterForPlaybackPosition(chapters, 119_999)?.id)
+        assertEquals("chapter-c", resolveActiveChapterForPlaybackPosition(chapters, 120_000)?.id)
+        assertNull(resolveActiveChapterForPlaybackPosition(chapters, -1))
+    }
+
+    @Test
+    fun `active chapter display label falls back for null blank and trimmed titles`() {
+        assertEquals("Kein Kapitel an dieser Position", activeChapterDisplayLabel(null))
+        assertEquals(
+            "Unbenanntes Kapitel · 00:15 – 01:00",
+            activeChapterDisplayLabel(
+                LibraryChapter(
+                    id = "chapter-1",
+                    title = "   ",
+                    startSeconds = 15,
+                    endSeconds = 60,
+                ),
+            ),
+        )
+        assertEquals(
+            "Kapitel 12 · 00:45",
+            activeChapterDisplayLabel(
+                LibraryChapter(
+                    id = "chapter-2",
+                    title = "  Kapitel 12  ",
+                    startSeconds = 45,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `active chapter context display text wraps the active chapter label`() {
+        assertEquals(
+            "Aktuelles Kapitel: Kein Kapitel an dieser Position",
+            activeChapterContextDisplayText(null),
+        )
+        assertEquals(
+            "Aktuelles Kapitel: Kapitel 12 · 00:45",
+            activeChapterContextDisplayText(
+                LibraryChapter(
+                    id = "chapter-2",
+                    title = "Kapitel 12",
+                    startSeconds = 45,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `selected chapter context matches the active playback item only when ids align`() {
+        assertEquals(false, isSelectedChapterContextActivePlaybackItem(null, "abc123"))
+        assertEquals(true, isSelectedChapterContextActivePlaybackItem(" abc123 ", "abc123"))
+        assertEquals(false, isSelectedChapterContextActivePlaybackItem("abc123", "different-id"))
+        assertEquals(false, isSelectedChapterContextActivePlaybackItem("   ", "abc123"))
+    }
+
+    @Test
+    fun `selected chapter context resets when the active playback item changes`() {
+        assertEquals(false, shouldResetSelectedChapterContext(null, "abc123"))
+        assertEquals(false, shouldResetSelectedChapterContext("abc123", "abc123"))
+        assertEquals(true, shouldResetSelectedChapterContext("abc123", "different-id"))
+        assertEquals(true, shouldResetSelectedChapterContext("abc123", null))
+        assertEquals(false, shouldResetSelectedChapterContext("   ", "different-id"))
+    }
+
+    @Test
+    fun `selected chapter display label falls back safely for missing and blank ids`() {
+        val chapters = listOf(
+            LibraryChapter(id = "chapter-1", title = "Chapter 1", startSeconds = 5, endSeconds = 15),
+        )
+
+        assertNull(selectedChapterDisplayLabel(chapters, null))
+        assertNull(selectedChapterDisplayLabel(chapters, "   "))
+        assertEquals("Ausgewähltes Kapitel", selectedChapterDisplayLabel(chapters, "missing-id"))
+    }
+}

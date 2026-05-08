@@ -174,9 +174,11 @@ internal fun ShelfPlayerApp(
     var initializationAttempt by rememberSaveable { mutableStateOf(0) }
     var selectedLibraryItemId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedLibraryItemDetailState by remember { mutableStateOf<ItemDetailState>(ItemDetailState.Loading) }
+    var playbackLibraryItemDetailState by remember { mutableStateOf<ItemDetailState>(ItemDetailState.Loading) }
     var selectedLibraryItemDetailReloadKey by rememberSaveable { mutableStateOf(0) }
     var selectedChapterId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedChapterStartSeconds by rememberSaveable { mutableStateOf<Int?>(null) }
+    var lastPlaybackActiveItemId by remember { mutableStateOf<String?>(null) }
     var mediaPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
     val connectionCredentials = rememberedConnection
     var playbackActiveItemId by remember { mutableStateOf<String?>(null) }
@@ -594,17 +596,46 @@ internal fun ShelfPlayerApp(
     }
 
     val selectedLibraryItemDetail = selectedLibraryItemDetailState as? ItemDetailState.Loaded
-    val selectedChapterLabel = selectedLibraryItemDetail
+    val playbackLibraryItemDetail = playbackLibraryItemDetailState as? ItemDetailState.Loaded
+    val selectedChapterLabel = playbackLibraryItemDetail
         ?.detail
         ?.chapters
         ?.let { chapters -> selectedChapterId?.let { chapterId -> selectedChapterDisplayLabel(chapters, chapterId) } }
-    val selectedChapterContextMatchesActivePlaybackItem =
-        playbackActiveItemId == null || playbackActiveItemId == selectedLibraryItemDetail?.detail?.item?.id
+    val selectedChapterContextMatchesActivePlaybackItem = isSelectedChapterContextActivePlaybackItem(
+        playbackActiveItemId = playbackActiveItemId,
+        selectedItemId = playbackLibraryItemDetail?.detail?.item?.id,
+    )
 
     LaunchedEffect(selectedLibraryItemId, selectedLibraryItemDetailReloadKey) {
         val itemId = selectedLibraryItemId ?: return@LaunchedEffect
         selectedLibraryItemDetailState = ItemDetailState.Loading
         selectedLibraryItemDetailState = runSuspendCatchingPreservingCancellation {
+            withContext(Dispatchers.IO) {
+                libraryRepository.getItemDetail(itemId)
+            }
+        }.fold(
+            onSuccess = { detail ->
+                detail?.let { ItemDetailState.Loaded(it) }
+                    ?: ItemDetailState.Error("Detaildaten konnten nicht gefunden werden")
+            },
+            onFailure = { throwable ->
+                ItemDetailState.Error(throwable.message ?: "Detaildaten konnten nicht geladen werden")
+            },
+        )
+    }
+
+    LaunchedEffect(playbackActiveItemId) {
+        if (shouldResetSelectedChapterContext(lastPlaybackActiveItemId, playbackActiveItemId)) {
+            selectedChapterId = null
+            selectedChapterStartSeconds = null
+        }
+        lastPlaybackActiveItemId = playbackActiveItemId
+        val itemId = playbackActiveItemId ?: run {
+            playbackLibraryItemDetailState = ItemDetailState.Loading
+            return@LaunchedEffect
+        }
+        playbackLibraryItemDetailState = ItemDetailState.Loading
+        playbackLibraryItemDetailState = runSuspendCatchingPreservingCancellation {
             withContext(Dispatchers.IO) {
                 libraryRepository.getItemDetail(itemId)
             }
@@ -867,15 +898,7 @@ internal fun ShelfPlayerApp(
                             },
                         )
                         AppTab.Player -> {
-                            val activePlaybackItem = (playbackActiveItemId ?: selectedLibraryItemId)?.let { resolveLibraryItem(it) }
-                            val selectedLibraryItemChapters = if (selectedChapterContextMatchesActivePlaybackItem) {
-                                (selectedLibraryItemDetailState as? ItemDetailState.Loaded)
-                                    ?.detail
-                                    ?.chapters
-                                    .orEmpty()
-                            } else {
-                                emptyList()
-                            }
+                            val activePlaybackItem = playbackActiveItemId?.let { resolveLibraryItem(it) }
                             val playerSelectedChapterLabel = if (selectedChapterContextMatchesActivePlaybackItem) {
                                 selectedChapterLabel
                             } else {
@@ -900,7 +923,7 @@ internal fun ShelfPlayerApp(
                                 playbackError = playbackError,
                                 playbackDurationMs = playbackDurationMs,
                                 playbackPositionMs = playbackPositionMs,
-                                chapterQuickAccess = selectedLibraryItemChapters,
+                                chapterQuickAccess = playbackLibraryItemDetail?.detail?.chapters.orEmpty(),
                                 onPlay = {
                                     activePlaybackItem?.id?.let { itemId ->
                                         startPlayback(itemId, playerSelectedChapterStartSeconds)
@@ -1038,7 +1061,7 @@ private fun PlayerScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    "Aktuelles Kapitel: ${activeChapterDisplayLabel(activeQuickAccessChapter)}",
+                    activeChapterContextDisplayText(activeQuickAccessChapter),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
