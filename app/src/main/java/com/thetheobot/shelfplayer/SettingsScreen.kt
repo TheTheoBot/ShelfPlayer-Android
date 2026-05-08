@@ -26,6 +26,14 @@ private val playbackRateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
 private val playbackSkipIntervalOptions = listOf(5, 10, 15, 30, 45, 60)
 private val themeModeOptions = listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK)
 
+internal fun formatSkipIntervalSummary(seconds: Int): String {
+    return if (seconds == 1) {
+        "1 Sekunde"
+    } else {
+        "$seconds Sekunden"
+    }
+}
+
 internal fun formatSkipInterval(seconds: Int): String = "${seconds}s"
 
 internal fun settingsConnectShortcutButtonLabel(session: ConnectionSession): String {
@@ -43,7 +51,7 @@ internal data class SettingsPlaybackSummaryRow(
 
 internal fun settingsPlaybackSummaryRows(settings: AppSettings): List<SettingsPlaybackSummaryRow> {
     return listOf(
-        SettingsPlaybackSummaryRow("Sprungintervall", formatSkipInterval(settings.playbackSkipIntervalSeconds)),
+        SettingsPlaybackSummaryRow("Sprungintervall", formatSkipIntervalSummary(settings.playbackSkipIntervalSeconds)),
         SettingsPlaybackSummaryRow("Standardrate", formatPlaybackRate(settings.defaultPlaybackRate)),
         SettingsPlaybackSummaryRow("Darstellung", themeModeButtonLabel(settings.themeMode)),
     )

@@ -514,3 +514,18 @@
 - Commit(s): pending
 - Next step:
 - Commit this slice, push it, and update Story #10 with the commit hash and CI run link once GitHub Actions finishes.
+
+## 2026-05-08T14:31:16Z
+- Story/Issue: #10 — Story: Settings playback summary polish
+- Micro-task 1: Added a readable playback-summary formatter so the skip interval now renders as singular/plural German text in the summary card while the compact choice buttons stay unchanged.
+- Micro-task 2: Added unit coverage for the new formatter and updated the summary-row expectations to match the readable presentation.
+- Micro-task 3: Appended this run’s implementation-log entry to keep the Story #10 documentation current.
+- Verification:
+  - `git diff --check` ✅
+  - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
+  - `./gradlew testDebugUnitTest --tests com.thetheobot.shelfplayer.SettingsScreenTest` could not run locally because Java is not installed in this environment (`java: not found`)
+  - Independent spec review: PASS
+  - Independent code quality review: APPROVED
+- Commit(s): pending
+- Next step:
+- Commit the settings-summary polish, push it, and update Story #10 with the commit hash plus GitHub Actions CI run link/status once the workflow finishes.
