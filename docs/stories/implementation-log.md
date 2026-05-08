@@ -442,3 +442,17 @@
 - Commit(s): `0cb6cd6` — feat: polish player progress resume
 - Next step:
 - Push the player/progress polish slice, then update Story #4 with the commit hash and CI run link once GitHub Actions finishes.
+
+## 2026-05-08T10:32:15Z
+- Story/Issue: #8 — Story: Internal route foundation for item detail and player
+- Implemented:
+- Hardened the internal route parser to strip query and fragment suffixes before route-segment parsing while preserving existing player/item parsing, encoded item-id decoding, and malformed-route rejection.
+- Added regression coverage for `player?foo=bar` / `player#section`, `item/abc123?foo=bar` / `item/abc123#section`, and extra-segment malformed routes.
+- Verification:
+- `git diff --check` ✅
+- Static diff scan: no secrets / shell injection / eval / pickle / SQL injection matches
+- Local Gradle execution remains blocked here because `java` is not installed in this environment.
+- Commit(s):
+- `00691ce` — feat: harden internal route parsing
+- Next step:
+- Commit, push, and update Story #8 with the final commit hash and CI run link/status.
