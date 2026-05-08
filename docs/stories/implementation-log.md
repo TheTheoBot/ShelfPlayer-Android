@@ -381,13 +381,17 @@
 - Commit the CI result update, then update the GitHub issue comment with the commit hash and CI links/status.
 
 ## 2026-05-08T05:36:34Z
-- Story issue: pending GitHub issue update
+- Story/Issue: #1 — Story: Harden connection onboarding URL validation
 - Micro-task 1: Hardened connection URL validation so remote plain HTTP is rejected while local development HTTP remains allowed (`localhost`, `127.0.0.1`, `::1`, `10.0.2.2`).
 - Micro-task 2: Added regression coverage for remote HTTP rejection plus path/query/fragment URL rejection in the connection validation tests.
 - Micro-task 3: Added this run’s implementation-log entry for the current MVP slice.
 - Verification:
   - `git diff --check` ✅
   - Local Gradle unit test execution is blocked in this environment because `java` is not installed (`./gradlew: line 7: exec: java: not found`).
+  - GitHub Actions run `25539107052` (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25539107052
+  - GitHub Actions run `25539107071` (Android Debug Build) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25539107071
+  - GitHub Actions run `25539107061` (Android APK) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25539107061
+  - GitHub Actions run `25539107082` (Android Unit Tests) — failure: duplicate test-function overloads in `LibraryRepositoryTest.kt` (pre-existing baseline blocker)
   - Validation changes were reviewed with the spec and code quality gate; one URL parsing edge case was fixed before completion.
-- Commit(s): pending
-- Next step: Create/update the GitHub story issue, push the changes, and attach the commit/CI reference back into this log.
+- Commit(s): `8a933b6` — feat: harden connection onboarding URL validation
+- Next step: Update the GitHub story issue with the commit hash and CI links/status, then continue with the next MVP slice.
