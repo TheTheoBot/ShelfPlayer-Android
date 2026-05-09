@@ -155,4 +155,20 @@ class ShelfPlayerAppTest {
             ),
         )
     }
+
+    @Test
+    fun `chapter quick access helper reports the active chapter state for accessibility`() {
+        assertEquals(
+            "Aktuelles Kapitel",
+            chapterQuickAccessStateDescription(isActiveChapter = true),
+        )
+    }
+
+    @Test
+    fun `chapter quick access helper reports inactive chapters as available`() {
+        assertEquals(
+            "Kapitel verfügbar",
+            chapterQuickAccessStateDescription(isActiveChapter = false),
+        )
+    }
 }

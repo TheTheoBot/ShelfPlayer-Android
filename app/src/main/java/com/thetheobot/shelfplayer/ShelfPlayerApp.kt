@@ -180,6 +180,14 @@ private fun resolvePlayerStatePresentation(
     }
 }
 
+internal fun chapterQuickAccessStateDescription(isActiveChapter: Boolean): String {
+    return if (isActiveChapter) {
+        "Aktuelles Kapitel"
+    } else {
+        "Kapitel verfügbar"
+    }
+}
+
 internal fun playerStateStatusText(
     isPreparingPlayback: Boolean,
     isPlayingPlayback: Boolean,
@@ -1202,8 +1210,12 @@ private fun PlayerScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     chapterQuickAccess.take(4).forEach { chapter ->
                         val isActiveChapter = chapter.id == activeQuickAccessChapter?.id
+                        val chapterButtonModifier = Modifier.semantics {
+                            stateDescription = chapterQuickAccessStateDescription(isActiveChapter)
+                        }
                         if (isActiveChapter) {
                             Button(
+                                modifier = chapterButtonModifier,
                                 onClick = { onChapterSelected(chapter) },
                                 enabled = !isPreparingPlayback,
                             ) {
@@ -1211,6 +1223,7 @@ private fun PlayerScreen(
                             }
                         } else {
                             OutlinedButton(
+                                modifier = chapterButtonModifier,
                                 onClick = { onChapterSelected(chapter) },
                                 enabled = !isPreparingPlayback,
                             ) {

@@ -660,3 +660,15 @@
 - Commit(s): `fe18387` — feat: improve player status accessibility
 - GitHub issue comment: https://github.com/TheTheoBot/ShelfPlayer-Android/issues/13#issuecomment-4410812374
 - Next step: Continue with the next MVP slice once this player accessibility polish is absorbed into main.
+
+## 2026-05-09T01:18:52Z
+- Story/Issue: #12 — Story: Active chapter context follows the playback item
+- Micro-task 1: Added a pure chapter quick-access accessibility helper so the player can distinguish active vs. inactive chapter buttons in one place.
+- Micro-task 2: Wired the player chapter quick-access buttons to expose an accessibility `stateDescription` without changing the visible chapter labels or the active-button highlight.
+- Micro-task 3: Added JVM regression coverage for the active and inactive chapter quick-access accessibility descriptions.
+- Verification:
+  - `git diff --check` ✅
+  - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
+  - Local Gradle execution is blocked here because Java is not installed in this environment.
+- Commit(s): pending
+- Next step: Commit, push, and attach the GitHub Actions run plus a story issue update once the branch is published.
