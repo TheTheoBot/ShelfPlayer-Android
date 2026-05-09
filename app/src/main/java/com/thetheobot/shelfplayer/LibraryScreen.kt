@@ -201,7 +201,7 @@ private fun LibraryFeedStateCard(
                         Button(onClick = onRetry) {
                             Text("Erneut versuchen")
                         }
-                        OutlinedButton(onClick = onRetry) {
+                        TextButton(onClick = onRetry) {
                             Text("Aktualisieren")
                         }
                     }
