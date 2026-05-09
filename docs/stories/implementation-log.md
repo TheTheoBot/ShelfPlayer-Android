@@ -716,3 +716,15 @@
 - Commit(s): `2caffc53269aaa438f6390346b3f52edb8c9db05`
 - Next step:
 - Continue with the next P0 polish slice only if CI stays green.
+
+## 2026-05-09T04:19:57Z
+- Story/Issue: #16 — Story: Connection onboarding clarity summary
+- Implemented:
+- Added pure connection-screen presentation helpers for the saved-connection summary card and the server-URL guidance message so the onboarding copy is testable without touching validation or persistence.
+- Surfaced the new saved-connection summary card and inline guidance in `ConnectionScreen` while keeping the existing save/test behavior, validation, and error/banner flow intact.
+- Added regression tests for the no-saved-connection, saved-connection, HTTPS, local HTTP, and remote HTTP guidance branches.
+- Verification:
+- `git diff --check` ✅
+- Local Gradle execution was not run here because Java is unavailable in this environment.
+- Next step:
+- Commit the slice, push it, and update Story #16 with the commit hash and CI run link once GitHub Actions completes.

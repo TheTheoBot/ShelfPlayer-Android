@@ -144,6 +144,7 @@ fun ConnectionScreen(
     var bannerMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var bannerIsError by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val savedConnectionSummary = connectionScreenSavedConnectionSummary(connectionSession)
 
     LaunchedEffect(connectionSession.serverUrl) {
         if (serverUrl.isBlank()) {
@@ -189,6 +190,13 @@ fun ConnectionScreen(
             style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
         )
 
+        Card(colors = CardDefaults.elevatedCardColors()) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(savedConnectionSummary.title)
+                Text(savedConnectionSummary.message)
+            }
+        }
+
         if (bannerMessage != null) {
             val currentBannerMessage = bannerMessage
             Card(
@@ -230,14 +238,11 @@ fun ConnectionScreen(
         if (validation.serverUrlError != null) {
             Text(validation.serverUrlError, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
         } else {
-            val warningMessage = serverUrlSecurityWarning(serverUrl)
-            if (warningMessage != null) {
-                Text(
-                    warningMessage,
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.tertiary,
-                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                )
-            }
+            Text(
+                connectionScreenServerUrlGuidance(serverUrl),
+                color = androidx.compose.material3.MaterialTheme.colorScheme.tertiary,
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+            )
         }
 
         OutlinedTextField(

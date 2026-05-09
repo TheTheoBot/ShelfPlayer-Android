@@ -100,6 +100,67 @@ class ConnectionValidationTest {
     }
 
     @Test
+    fun `connectionScreenSavedConnectionSummary shows empty state when no server is remembered`() {
+        val summary = connectionScreenSavedConnectionSummary(ConnectionSession())
+
+        assertEquals("Noch keine Verbindung gespeichert", summary.title)
+        assertEquals(
+            "Trage Server-URL und Access Token ein, um mit dem Einrichten zu beginnen.",
+            summary.message,
+        )
+    }
+
+    @Test
+    fun `connectionScreenSavedConnectionSummary shows remembered server and encrypted token note`() {
+        val summary = connectionScreenSavedConnectionSummary(
+            ConnectionSession(
+                ConnectionCredentials(
+                    serverUrl = "https://books.example.com",
+                    accessToken = "abc-123",
+                ),
+            ),
+        )
+
+        assertEquals("Gespeicherte Verbindung", summary.title)
+        assertEquals(
+            "Server: https://books.example.com\nToken bleibt verschlüsselt auf dem Gerät gespeichert.",
+            summary.message,
+        )
+    }
+
+    @Test
+    fun `connectionScreenServerUrlGuidance prompts for setup when no server url is entered`() {
+        assertEquals(
+            "Noch keine Verbindung gespeichert. Trage Server-URL und Access Token ein.",
+            connectionScreenServerUrlGuidance("   "),
+        )
+    }
+
+    @Test
+    fun `connectionScreenServerUrlGuidance recommends https for public servers`() {
+        assertEquals(
+            "HTTPS ist für öffentliche Server empfohlen.",
+            connectionScreenServerUrlGuidance("https://books.example.com"),
+        )
+    }
+
+    @Test
+    fun `connectionScreenServerUrlGuidance distinguishes local http setups`() {
+        assertEquals(
+            "HTTP ist für lokale oder selbst gehostete Setups okay; für öffentliche Server bitte HTTPS verwenden.",
+            connectionScreenServerUrlGuidance("http://localhost:1337"),
+        )
+    }
+
+    @Test
+    fun `connectionScreenServerUrlGuidance warns for non local http urls`() {
+        assertEquals(
+            "HTTP ist unverschlüsselt; für öffentliche Server bitte HTTPS verwenden.",
+            connectionScreenServerUrlGuidance("http://books.example.com"),
+        )
+    }
+
+    @Test
     fun `serverUrlSecurityWarning warns for http urls`() {
         assertEquals(
             "Warnung: HTTP ist unverschlüsselt. Für lokale Setups okay, im Internet bitte HTTPS verwenden.",
