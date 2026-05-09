@@ -194,6 +194,12 @@ fun ConnectionScreen(
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(savedConnectionSummary.title)
                 Text(savedConnectionSummary.message)
+                savedConnectionSummary.statusLabel?.let { statusLabel ->
+                    Text(
+                        "Status: $statusLabel",
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         }
 

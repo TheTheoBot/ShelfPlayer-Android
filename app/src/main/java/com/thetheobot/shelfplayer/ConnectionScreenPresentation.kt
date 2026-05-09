@@ -3,6 +3,7 @@ package com.thetheobot.shelfplayer
 data class ConnectionScreenSummary(
     val title: String,
     val message: String,
+    val statusLabel: String? = null,
 )
 
 fun connectionScreenSavedConnectionSummary(session: ConnectionSession): ConnectionScreenSummary {
@@ -10,12 +11,37 @@ fun connectionScreenSavedConnectionSummary(session: ConnectionSession): Connecti
         ConnectionScreenSummary(
             title = "Gespeicherte Verbindung",
             message = "Server: ${session.serverUrl}\nToken bleibt verschlüsselt auf dem Gerät gespeichert.",
+            statusLabel = connectionScreenSavedConnectionStatusLabel(session),
         )
     } else {
         ConnectionScreenSummary(
             title = "Noch keine Verbindung gespeichert",
             message = "Trage Server-URL und Access Token ein, um mit dem Einrichten zu beginnen.",
         )
+    }
+}
+
+fun connectionScreenSavedConnectionStatusLabel(session: ConnectionSession): String? {
+    if (!session.hasSavedServer) return null
+
+    val rawServerUrl = session.serverUrl.trim()
+    val uri = runCatching { java.net.URI(rawServerUrl) }.getOrNull() ?: return "unbekannt"
+    val isHttps = uri.scheme?.equals("https", ignoreCase = true) == true
+    val isHttp = uri.scheme?.equals("http", ignoreCase = true) == true
+
+    if (isHttps) {
+        return "HTTPS"
+    }
+
+    if (!isHttp) {
+        return "unbekannt"
+    }
+
+    val host = uri.host ?: extractHostFromAuthority(rawServerUrl)
+    return if (isLikelyLocalHttpHost(host)) {
+        "lokales HTTP"
+    } else {
+        "unbekannt"
     }
 }
 

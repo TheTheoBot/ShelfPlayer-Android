@@ -1,7 +1,19 @@
 1|# Implementation Log
-     2|
-     3|## 2026-05-07T07:17:00Z
-     4|- Story/Issue: #1 — Story: Harden connection onboarding URL validation
+2|
+3|## 2026-05-09T05:51:17Z
+4|- Story/Issue: #16 — Story: Connection onboarding clarity summary
+5|- Implemented:
+6|- Added a pure saved-connection status helper that classifies remembered servers as HTTPS, local HTTP, or unknown, trimming legacy whitespace before parsing.
+7|- Wired the status label into the Connection screen summary card so saved connections now surface a short extra status line without affecting validation, test, or save flows.
+8|- Extended JVM coverage for the new status helper and the summary presentation model.
+9|- Verification:
+10|- `git diff --check` ✅
+11|- `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
+12|- Next step:
+13|- Run diff checks and unit tests if the toolchain is available, then push the slice and update the story issue with the commit hash/CI link.
+14|
+15|## 2026-05-07T07:17:00Z
+
      5|- Implemented:
      6|- Hardened `validateServerUrl` to reject missing-scheme and malformed URL inputs while keeping valid HTTPS URLs and local development HTTP URLs accepted.
      7|- Added regression coverage for missing scheme and malformed URL parsing.

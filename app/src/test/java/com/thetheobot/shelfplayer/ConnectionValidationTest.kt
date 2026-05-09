@@ -108,6 +108,7 @@ class ConnectionValidationTest {
             "Trage Server-URL und Access Token ein, um mit dem Einrichten zu beginnen.",
             summary.message,
         )
+        assertNull(summary.statusLabel)
     }
 
     @Test
@@ -125,6 +126,56 @@ class ConnectionValidationTest {
         assertEquals(
             "Server: https://books.example.com\nToken bleibt verschlüsselt auf dem Gerät gespeichert.",
             summary.message,
+        )
+        assertEquals("HTTPS", summary.statusLabel)
+    }
+
+    @Test
+    fun `connectionScreenSavedConnectionStatusLabel classifies saved servers`() {
+        assertNull(connectionScreenSavedConnectionStatusLabel(ConnectionSession()))
+        assertEquals(
+            "HTTPS",
+            connectionScreenSavedConnectionStatusLabel(
+                ConnectionSession(
+                    ConnectionCredentials(
+                        serverUrl = "https://books.example.com",
+                        accessToken = "abc-123",
+                    ),
+                ),
+            ),
+        )
+        assertEquals(
+            "HTTPS",
+            connectionScreenSavedConnectionStatusLabel(
+                ConnectionSession(
+                    ConnectionCredentials(
+                        serverUrl = "  https://books.example.com/  ",
+                        accessToken = "abc-123",
+                    ),
+                ),
+            ),
+        )
+        assertEquals(
+            "lokales HTTP",
+            connectionScreenSavedConnectionStatusLabel(
+                ConnectionSession(
+                    ConnectionCredentials(
+                        serverUrl = "http://localhost:1337",
+                        accessToken = "abc-123",
+                    ),
+                ),
+            ),
+        )
+        assertEquals(
+            "unbekannt",
+            connectionScreenSavedConnectionStatusLabel(
+                ConnectionSession(
+                    ConnectionCredentials(
+                        serverUrl = "http://books.example.com",
+                        accessToken = "abc-123",
+                    ),
+                ),
+            ),
         )
     }
 
