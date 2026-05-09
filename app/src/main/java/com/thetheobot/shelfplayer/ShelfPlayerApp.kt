@@ -47,6 +47,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
@@ -143,19 +145,67 @@ internal fun resolvePlaybackFlushPositionMs(
     return (mediaPlayerPositionMs ?: playbackPositionMs).coerceAtLeast(0)
 }
 
+private data class PlayerStatePresentation(
+    val statusText: String,
+    val accessibilityStateDescription: String,
+)
+
+private fun resolvePlayerStatePresentation(
+    isPreparingPlayback: Boolean,
+    isPlayingPlayback: Boolean,
+    hasActivePlaybackItem: Boolean,
+    playbackError: String?,
+): PlayerStatePresentation {
+    return when {
+        !playbackError.isNullOrBlank() -> PlayerStatePresentation(
+            statusText = "Fehler",
+            accessibilityStateDescription = "Fehler",
+        )
+        isPreparingPlayback -> PlayerStatePresentation(
+            statusText = "Lädt…",
+            accessibilityStateDescription = "Lädt",
+        )
+        isPlayingPlayback -> PlayerStatePresentation(
+            statusText = "Wiedergabe läuft",
+            accessibilityStateDescription = "Wiedergabe läuft",
+        )
+        hasActivePlaybackItem -> PlayerStatePresentation(
+            statusText = "Pausiert",
+            accessibilityStateDescription = "Pausiert",
+        )
+        else -> PlayerStatePresentation(
+            statusText = "Bereit",
+            accessibilityStateDescription = "Bereit",
+        )
+    }
+}
+
 internal fun playerStateStatusText(
     isPreparingPlayback: Boolean,
     isPlayingPlayback: Boolean,
     hasActivePlaybackItem: Boolean,
     playbackError: String?,
 ): String {
-    return when {
-        !playbackError.isNullOrBlank() -> "Fehler"
-        isPreparingPlayback -> "Lädt…"
-        isPlayingPlayback -> "Wiedergabe läuft"
-        hasActivePlaybackItem -> "Pausiert"
-        else -> "Bereit"
-    }
+    return resolvePlayerStatePresentation(
+        isPreparingPlayback = isPreparingPlayback,
+        isPlayingPlayback = isPlayingPlayback,
+        hasActivePlaybackItem = hasActivePlaybackItem,
+        playbackError = playbackError,
+    ).statusText
+}
+
+internal fun playerStateAccessibilityDescription(
+    isPreparingPlayback: Boolean,
+    isPlayingPlayback: Boolean,
+    hasActivePlaybackItem: Boolean,
+    playbackError: String?,
+): String {
+    return resolvePlayerStatePresentation(
+        isPreparingPlayback = isPreparingPlayback,
+        isPlayingPlayback = isPlayingPlayback,
+        hasActivePlaybackItem = hasActivePlaybackItem,
+        playbackError = playbackError,
+    ).accessibilityStateDescription
 }
 
 private val playbackRateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
@@ -1027,7 +1077,16 @@ private fun PlayerScreen(
     ) {
         Text("Now Playing", style = MaterialTheme.typography.labelLarge)
         Surface(
-            modifier = Modifier.fillMaxWidth(0.9f),
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .semantics {
+                    stateDescription = playerStateAccessibilityDescription(
+                        isPreparingPlayback = isPreparingPlayback,
+                        isPlayingPlayback = isPlayingPlayback,
+                        hasActivePlaybackItem = hasActivePlaybackItem,
+                        playbackError = playbackError,
+                    )
+                },
             shape = MaterialTheme.shapes.medium,
             tonalElevation = 2.dp,
         ) {
