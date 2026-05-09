@@ -324,6 +324,23 @@
 - Next step:
 - Push the settings slice, then add the GitHub issue comment with the final commit hash and CI run link for Story #7.
 
+## 2026-05-09T02:03:58Z
+- Story/Issue: #9 — Story: Deterministic back navigation for Library, Detail, and Player
+- Implemented:
+- Split back-navigation handling so the player now returns to the prior library detail context when an item is selected, while library-root detail back still closes the detail view.
+- Kept launch/deep-link behavior intact and updated the back-navigation unit coverage to reflect the player, library-detail, other-tab, and library-root cases.
+- Verification:
+- `git diff --check` ✅
+- `java -version` → `command not found`
+- `./gradlew testDebugUnitTest` could not run locally because Java is not installed in this environment.
+- Independent spec review: PASS
+- Independent code quality review: APPROVED
+- GitHub issue: https://github.com/TheTheoBot/ShelfPlayer-Android/issues/9
+- Commit(s):
+- `51afe95` — feat: refine deterministic back navigation
+- Next step:
+- Push the back-navigation slice, then add the GitHub issue comment with the commit hash and CI run link for Story #9.
+
 ## 2026-05-08T02:01:21Z
 - Story/Issue: #4 — Story: Player progress sync and resume
 - Implemented:
