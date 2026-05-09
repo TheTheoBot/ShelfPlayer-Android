@@ -1,18 +1,32 @@
-1|# Implementation Log
-2|
-3|## 2026-05-09T05:51:17Z
-4|- Story/Issue: #16 — Story: Connection onboarding clarity summary
-5|- Implemented:
-6|- Added a pure saved-connection status helper that classifies remembered servers as HTTPS, local HTTP, or unknown, trimming legacy whitespace before parsing.
-7|- Wired the status label into the Connection screen summary card so saved connections now surface a short extra status line without affecting validation, test, or save flows.
-8|- Extended JVM coverage for the new status helper and the summary presentation model.
-9|- Verification:
-10|- `git diff --check` ✅
-11|- `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
-12|- Next step:
-13|- Run diff checks and unit tests if the toolchain is available, then push the slice and update the story issue with the commit hash/CI link.
-14|
-15|## 2026-05-07T07:17:00Z
+# Implementation Log
+
+## 2026-05-09T06:37:52Z
+- Story/Issue: #16 — Story: Connection onboarding clarity summary
+- Implemented:
+- Reused a shared server-classification helper so the saved-connection summary and inline URL guidance now derive HTTPS, local HTTP, and unknown cases from one pure parser.
+- Tightened the local-host heuristic to parse numeric IPv4 addresses only, so numeric-looking hostnames like `10.example.com` stay classified as remote/public.
+- Kept the saved summary copy and validation/persistence behavior unchanged while extending helper tests around trimmed saved URLs and local/private-LAN HTTP variants.
+- Added regression coverage for trimmed saved server URLs, localhost/private-LAN HTTP guidance, and the existing public HTTP warning path.
+- Verification:
+- `git diff --check` ✅
+- `java -version` → `command not found`
+- `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
+- Next step:
+- Push the slice, monitor CI, and update Story #16 with the commit hash and successful run link.
+
+## 2026-05-09T05:51:17Z
+- Story/Issue: #16 — Story: Connection onboarding clarity summary
+- Implemented:
+- Added a pure saved-connection status helper that classifies remembered servers as HTTPS, local HTTP, or unknown, trimming legacy whitespace before parsing.
+- Wired the status label into the Connection screen summary card so saved connections now surface a short extra status line without affecting validation, test, or save flows.
+- Extended JVM coverage for the new status helper and the summary presentation model.
+- Verification:
+- `git diff --check` ✅
+- `./gradlew testDebugUnitTest` could not run locally because `java` is not installed in this environment.
+- Next step:
+- Run diff checks and unit tests if the toolchain is available, then push the slice and update the story issue with the commit hash/CI link.
+
+
 
      5|- Implemented:
      6|- Hardened `validateServerUrl` to reject missing-scheme and malformed URL inputs while keeping valid HTTPS URLs and local development HTTP URLs accepted.

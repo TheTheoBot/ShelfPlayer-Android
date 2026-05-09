@@ -6,6 +6,37 @@ data class ConnectionScreenSummary(
     val statusLabel: String? = null,
 )
 
+private enum class ConnectionServerClassification {
+    HTTPS,
+    LOCAL_HTTP,
+    REMOTE_HTTP,
+    UNKNOWN,
+}
+
+private fun classifyConnectionServerUrl(rawServerUrl: String): ConnectionServerClassification? {
+    val trimmed = rawServerUrl.trim()
+    if (trimmed.isBlank()) return null
+
+    val uri = runCatching { java.net.URI(trimmed) }.getOrNull() ?: return ConnectionServerClassification.UNKNOWN
+    val isHttps = uri.scheme?.equals("https", ignoreCase = true) == true
+    val isHttp = uri.scheme?.equals("http", ignoreCase = true) == true
+
+    if (isHttps) {
+        return ConnectionServerClassification.HTTPS
+    }
+
+    if (!isHttp) {
+        return ConnectionServerClassification.UNKNOWN
+    }
+
+    val host = uri.host ?: extractHostFromAuthority(trimmed)
+    return if (isLikelyLocalHttpHost(host)) {
+        ConnectionServerClassification.LOCAL_HTTP
+    } else {
+        ConnectionServerClassification.REMOTE_HTTP
+    }
+}
+
 fun connectionScreenSavedConnectionSummary(session: ConnectionSession): ConnectionScreenSummary {
     return if (session.hasSavedServer) {
         ConnectionScreenSummary(
@@ -24,50 +55,20 @@ fun connectionScreenSavedConnectionSummary(session: ConnectionSession): Connecti
 fun connectionScreenSavedConnectionStatusLabel(session: ConnectionSession): String? {
     if (!session.hasSavedServer) return null
 
-    val rawServerUrl = session.serverUrl.trim()
-    val uri = runCatching { java.net.URI(rawServerUrl) }.getOrNull() ?: return "unbekannt"
-    val isHttps = uri.scheme?.equals("https", ignoreCase = true) == true
-    val isHttp = uri.scheme?.equals("http", ignoreCase = true) == true
-
-    if (isHttps) {
-        return "HTTPS"
-    }
-
-    if (!isHttp) {
-        return "unbekannt"
-    }
-
-    val host = uri.host ?: extractHostFromAuthority(rawServerUrl)
-    return if (isLikelyLocalHttpHost(host)) {
-        "lokales HTTP"
-    } else {
-        "unbekannt"
+    return when (classifyConnectionServerUrl(session.serverUrl)) {
+        ConnectionServerClassification.HTTPS -> "HTTPS"
+        ConnectionServerClassification.LOCAL_HTTP -> "lokales HTTP"
+        else -> "unbekannt"
     }
 }
 
 fun connectionScreenServerUrlGuidance(rawServerUrl: String): String {
-    val trimmed = rawServerUrl.trim()
-    if (trimmed.isBlank()) {
-        return "Noch keine Verbindung gespeichert. Trage Server-URL und Access Token ein."
-    }
-
-    val uri = runCatching { java.net.URI(trimmed) }.getOrNull() ?: return "Server-URL prüfen und für öffentliche Server HTTPS verwenden."
-    val isHttp = uri.scheme?.equals("http", ignoreCase = true) == true
-    val isHttps = uri.scheme?.equals("https", ignoreCase = true) == true
-
-    if (isHttps) {
-        return "HTTPS ist für öffentliche Server empfohlen."
-    }
-
-    if (!isHttp) {
-        return "Server-URL prüfen und für öffentliche Server HTTPS verwenden."
-    }
-
-    val host = uri.host ?: extractHostFromAuthority(trimmed)
-    return if (isLikelyLocalHttpHost(host)) {
-        "HTTP ist für lokale oder selbst gehostete Setups okay; für öffentliche Server bitte HTTPS verwenden."
-    } else {
-        "HTTP ist unverschlüsselt; für öffentliche Server bitte HTTPS verwenden."
+    return when (classifyConnectionServerUrl(rawServerUrl)) {
+        null -> "Noch keine Verbindung gespeichert. Trage Server-URL und Access Token ein."
+        ConnectionServerClassification.HTTPS -> "HTTPS ist für öffentliche Server empfohlen."
+        ConnectionServerClassification.LOCAL_HTTP -> "HTTP ist für lokale oder selbst gehostete Setups okay; für öffentliche Server bitte HTTPS verwenden."
+        ConnectionServerClassification.REMOTE_HTTP -> "HTTP ist unverschlüsselt; für öffentliche Server bitte HTTPS verwenden."
+        ConnectionServerClassification.UNKNOWN -> "Server-URL prüfen und für öffentliche Server HTTPS verwenden."
     }
 }
 
@@ -85,16 +86,20 @@ private fun isLikelyLocalHttpHost(host: String?): Boolean {
     }
 
     if (normalizedHost.endsWith(".local")) return true
-    if (normalizedHost.startsWith("192.168.")) return true
-    if (normalizedHost.startsWith("10.")) return true
 
-    if (normalizedHost.startsWith("172.")) {
-        val secondOctet = normalizedHost
-            .split('.')
-            .getOrNull(1)
-            ?.toIntOrNull()
-        if (secondOctet != null && secondOctet in 16..31) {
-            return true
+    val ipv4Octets = normalizedHost.split('.')
+    if (ipv4Octets.size == 4 && ipv4Octets.all { octet -> octet.all(Char::isDigit) }) {
+        val parsedOctets = ipv4Octets.mapNotNull { it.toIntOrNull() }
+        if (parsedOctets.size == 4 && parsedOctets.all { it in 0..255 }) {
+            val firstOctet = parsedOctets[0]
+            val secondOctet = parsedOctets[1]
+            return when (firstOctet) {
+                10 -> true
+                127 -> true
+                172 -> secondOctet in 16..31
+                192 -> secondOctet == 168
+                else -> false
+            }
         }
     }
 

@@ -112,12 +112,12 @@ class ConnectionValidationTest {
     }
 
     @Test
-    fun `connectionScreenSavedConnectionSummary shows remembered server and encrypted token note`() {
+    fun `connectionScreenSavedConnectionSummary shows trimmed remembered server and encrypted token note`() {
         val summary = connectionScreenSavedConnectionSummary(
             ConnectionSession(
                 ConnectionCredentials(
-                    serverUrl = "https://books.example.com",
-                    accessToken = "abc-123",
+                    serverUrl = "  https://books.example.com/  ",
+                    accessToken = "tok1",
                 ),
             ),
         )
@@ -138,19 +138,8 @@ class ConnectionValidationTest {
             connectionScreenSavedConnectionStatusLabel(
                 ConnectionSession(
                     ConnectionCredentials(
-                        serverUrl = "https://books.example.com",
-                        accessToken = "abc-123",
-                    ),
-                ),
-            ),
-        )
-        assertEquals(
-            "HTTPS",
-            connectionScreenSavedConnectionStatusLabel(
-                ConnectionSession(
-                    ConnectionCredentials(
                         serverUrl = "  https://books.example.com/  ",
-                        accessToken = "abc-123",
+                        accessToken = "tok1",
                     ),
                 ),
             ),
@@ -160,8 +149,8 @@ class ConnectionValidationTest {
             connectionScreenSavedConnectionStatusLabel(
                 ConnectionSession(
                     ConnectionCredentials(
-                        serverUrl = "http://localhost:1337",
-                        accessToken = "abc-123",
+                        serverUrl = "  http://localhost:1337  ",
+                        accessToken = "tok1",
                     ),
                 ),
             ),
@@ -172,7 +161,18 @@ class ConnectionValidationTest {
                 ConnectionSession(
                     ConnectionCredentials(
                         serverUrl = "http://books.example.com",
-                        accessToken = "abc-123",
+                        accessToken = "tok1",
+                    ),
+                ),
+            ),
+        )
+        assertEquals(
+            "unbekannt",
+            connectionScreenSavedConnectionStatusLabel(
+                ConnectionSession(
+                    ConnectionCredentials(
+                        serverUrl = "http://10.example.com",
+                        accessToken = "tok1",
                     ),
                 ),
             ),
@@ -200,6 +200,22 @@ class ConnectionValidationTest {
         assertEquals(
             "HTTP ist für lokale oder selbst gehostete Setups okay; für öffentliche Server bitte HTTPS verwenden.",
             connectionScreenServerUrlGuidance("http://localhost:1337"),
+        )
+    }
+
+    @Test
+    fun `connectionScreenServerUrlGuidance treats private lan http as local`() {
+        assertEquals(
+            "HTTP ist für lokale oder selbst gehostete Setups okay; für öffentliche Server bitte HTTPS verwenden.",
+            connectionScreenServerUrlGuidance("  http://192.168.178.24:13378/  "),
+        )
+    }
+
+    @Test
+    fun `connectionScreenServerUrlGuidance treats numeric looking hostnames as remote`() {
+        assertEquals(
+            "HTTP ist unverschlüsselt; für öffentliche Server bitte HTTPS verwenden.",
+            connectionScreenServerUrlGuidance("http://10.example.com"),
         )
     }
 
