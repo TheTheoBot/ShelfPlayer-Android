@@ -74,7 +74,12 @@ internal enum class AppTab(val label: String) {
 }
 
 internal fun bottomNavigationTabs(): List<AppTab> {
-    return AppTab.entries.filterNot { it == AppTab.Connect }
+    return listOf(
+        AppTab.Library,
+        AppTab.Search,
+        AppTab.Player,
+        AppTab.Settings,
+    )
 }
 
 internal fun playbackActionLabel(

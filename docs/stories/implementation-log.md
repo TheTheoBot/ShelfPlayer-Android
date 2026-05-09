@@ -689,3 +689,15 @@
   - Local Gradle execution is blocked here because Java is not installed in this environment.
 - Commit(s): `98b8c78` — feat: add chapter quick-access accessibility cue
 - Next step: Commit the docs log update, push, and attach the GitHub Actions run plus a story issue update once the branch is published.
+
+## 2026-05-09T02:45:07Z
+- Story/Issue: #11 — Story: Bottom navigation spec alignment
+- Micro-task 1: Made `bottomNavigationTabs()` return the explicit MVP tab order instead of deriving it from `AppTab.entries`, keeping the visible bottom nav stable and Connect internal.
+- Micro-task 2: Tightened the navigation JVM test to reuse the helper result once while still locking in the four visible tabs and the hidden Connect tab.
+- Micro-task 3: Logged this run in the implementation log before publishing the branch update.
+- Verification:
+  - `git diff --check` ✅
+  - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
+  - Local Gradle execution is blocked here because Java is not installed in this environment.
+- Commit(s): pending
+- Next step: Commit and push the slice, then update Story #11 with the final commit hash and GitHub Actions run link/status.

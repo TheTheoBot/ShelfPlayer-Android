@@ -7,6 +7,8 @@ import org.junit.Test
 class AppShellNavigationTest {
     @Test
     fun `bottom navigation exposes the four MVP tabs and hides connection management`() {
+        val tabs = bottomNavigationTabs()
+
         assertEquals(
             listOf(
                 AppTab.Library,
@@ -14,8 +16,8 @@ class AppShellNavigationTest {
                 AppTab.Player,
                 AppTab.Settings,
             ),
-            bottomNavigationTabs(),
+            tabs,
         )
-        assertFalse(bottomNavigationTabs().contains(AppTab.Connect))
+        assertFalse(tabs.contains(AppTab.Connect))
     }
 }
