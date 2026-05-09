@@ -20,6 +20,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 private val playbackRateOptions = listOf(0.75f, 1.0f, 1.25f, 1.5f)
@@ -57,6 +58,11 @@ internal fun settingsPlaybackSummaryRows(settings: AppSettings): List<SettingsPl
     )
 }
 
+internal fun settingsPlaybackSummaryPreview(settings: AppSettings): String {
+    return settingsPlaybackSummaryRows(settings)
+        .joinToString(" · ") { row -> "${row.label}: ${row.value}" }
+}
+
 @Composable
 private fun SettingsPlaybackSummaryBlock(settings: AppSettings) {
     Card(colors = CardDefaults.elevatedCardColors()) {
@@ -64,9 +70,17 @@ private fun SettingsPlaybackSummaryBlock(settings: AppSettings) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            val summaryRows = settingsPlaybackSummaryRows(settings)
             Text("Wiedergabe auf einen Blick", style = MaterialTheme.typography.titleMedium)
+            Text(
+                settingsPlaybackSummaryPreview(settings),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                settingsPlaybackSummaryRows(settings).forEach { row ->
+                summaryRows.forEach { row ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,

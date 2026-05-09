@@ -730,3 +730,18 @@
 - Commit(s): `7f5a4df19e7e86d41629c23ea5d8ea29c6a20df3` — [verified] feat: add connection onboarding clarity
 - Next step:
 - Update the issue comment with the code commit hash and CI run link, then continue to the next slice.
+
+## 2026-05-09T05:06:23Z
+- Story/Issue: #10 — Story: Settings playback summary polish
+- Implemented:
+- Micro-task 1: Added `settingsPlaybackSummaryPreview(...)` as a compact one-line helper built from the existing summary rows and formatting helpers.
+- Micro-task 2: Surfaced the preview text in the playback summary card above the existing labeled rows, leaving the current controls unchanged.
+- Micro-task 3: Expanded `SettingsScreenTest.kt` with regression coverage for the preview helper and the labeled playback summary rows.
+- Micro-task 4: Logged this run in the implementation log to keep Story #10 documentation current.
+- Verification:
+- `git diff --check` ✅
+- Static diff scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
+- `./gradlew testDebugUnitTest --tests com.thetheobot.shelfplayer.SettingsScreenTest` could not run locally because Java is not installed in this environment (`java: not found`)
+- Commit(s): pending
+- Next step:
+- Commit and push this slice, then update Story #10 with the commit hash and GitHub Actions CI run link/status once the workflow finishes.

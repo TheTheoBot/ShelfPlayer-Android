@@ -47,6 +47,25 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun `settings playback summary helper renders a compact one line preview from the labeled rows`() {
+        assertEquals(
+            "Sprungintervall: 15 Sekunden · Standardrate: 1.0x · Darstellung: System",
+            settingsPlaybackSummaryPreview(AppSettings()),
+        )
+
+        assertEquals(
+            "Sprungintervall: 1 Sekunde · Standardrate: 1.25x · Darstellung: Dunkel",
+            settingsPlaybackSummaryPreview(
+                AppSettings(
+                    playbackSkipIntervalSeconds = 1,
+                    defaultPlaybackRate = 1.25f,
+                    themeMode = ThemeMode.DARK,
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun `settings playback summary rows expose the normalized values in a compact labeled form`() {
         assertEquals(
             listOf(
