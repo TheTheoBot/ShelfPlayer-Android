@@ -712,6 +712,7 @@
 - `git diff --check` ✅
 - `./gradlew testDebugUnitTest --tests com.thetheobot.shelfplayer.LibraryRepositoryTest --tests com.thetheobot.shelfplayer.ItemDetailModelsTest` could not run locally because `java` is not installed in this environment.
 - GitHub issue: https://github.com/TheTheoBot/ShelfPlayer-Android/issues/15
-- Commit(s): pending
+- GitHub Actions run 25590736895 (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25590736895
+- Commit(s): `2caffc53269aaa438f6390346b3f52edb8c9db05`
 - Next step:
-- Push this slice, then let CI run the Android unit tests.
+- Continue with the next P0 polish slice only if CI stays green.
