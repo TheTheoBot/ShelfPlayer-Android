@@ -725,6 +725,8 @@
 - Added regression tests for the no-saved-connection, saved-connection, HTTPS, local HTTP, and remote HTTP guidance branches.
 - Verification:
 - `git diff --check` ✅
-- Local Gradle execution was not run here because Java is unavailable in this environment.
+- `java -version` → `command not found`
+- GitHub Actions run `25591688174` (Android CI) — success: https://github.com/TheTheoBot/ShelfPlayer-Android/actions/runs/25591688174
+- Commit(s): `7f5a4df19e7e86d41629c23ea5d8ea29c6a20df3` — [verified] feat: add connection onboarding clarity
 - Next step:
-- Commit the slice, push it, and update Story #16 with the commit hash and CI run link once GitHub Actions completes.
+- Update the issue comment with the code commit hash and CI run link, then continue to the next slice.
