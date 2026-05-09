@@ -290,6 +290,9 @@ class LibraryRepositoryTest {
         assertEquals("Podcast", formatItemType(LibraryItemType.Podcast))
         assertEquals("Serie", formatItemType(LibraryItemType.Series))
         assertEquals("Hörbuch · 44%", formatLibraryItemMetadata(item))
+        assertEquals("Hörbuch · 44%", formatLibraryItemSummary(item))
+        assertEquals("Jetzt abspielen", libraryItemPrimaryActionLabel(item))
+        assertEquals("Details ansehen", libraryItemSecondaryActionLabel())
     }
 
     @Test
@@ -316,8 +319,16 @@ class LibraryRepositoryTest {
         )
         assertEquals("Example Title", itemDetailStateTitle(ItemDetailState.Loaded(detail)))
         assertEquals(
-            "1 Kapitel · 44% · A long-form description for the item detail screen.",
+            "Hörbuch · 44% Fortschritt · 1 Kapitel",
             itemDetailStateMessage(ItemDetailState.Loaded(detail)),
+        )
+        assertEquals(
+            "Hörbuch · 44% Fortschritt · 1 Kapitel",
+            formatItemDetailSummary(detail),
+        )
+        assertEquals(
+            "Hörbuch · 44% Fortschritt · Keine Kapitel",
+            formatItemDetailSummary(detail.copy(chapters = emptyList())),
         )
         assertEquals("Bitte später erneut versuchen.", itemDetailStateMessage(ItemDetailState.Error(message = "   ")))
         assertEquals("03:20 – 05:00", formatChapterRange(200, 300))
@@ -382,11 +393,62 @@ class LibraryRepositoryTest {
     }
 
     @Test
+    fun `library item action labels reflect progress-aware hierarchy`() {
+        val item = LibraryItem(
+            id = "summary-item",
+            title = "Summary Item",
+            author = "Author",
+            progressPercent = 42,
+            itemType = LibraryItemType.Audiobook,
+        )
+
+        assertEquals("Hörbuch · 42%", formatLibraryItemSummary(item))
+        assertEquals("Hörbuch · 42%", formatLibraryItemMetadata(item))
+        assertEquals(
+            "Jetzt abspielen",
+            libraryItemPrimaryActionLabel(
+                LibraryItem(
+                    id = "fresh-item",
+                    title = "Fresh Item",
+                    author = "Author",
+                    progressPercent = -4,
+                    itemType = LibraryItemType.Audiobook,
+                ),
+            ),
+        )
+        assertEquals(
+            "Fortsetzen",
+            libraryItemPrimaryActionLabel(
+                LibraryItem(
+                    id = "in-progress-item",
+                    title = "In Progress",
+                    author = "Author",
+                    progressPercent = 42,
+                    itemType = LibraryItemType.Podcast,
+                ),
+            ),
+        )
+        assertEquals(
+            "Nochmal abspielen",
+            libraryItemPrimaryActionLabel(
+                LibraryItem(
+                    id = "completed-item",
+                    title = "Completed",
+                    author = "Author",
+                    progressPercent = 140,
+                    itemType = LibraryItemType.Series,
+                ),
+            ),
+        )
+        assertEquals("Details ansehen", libraryItemSecondaryActionLabel())
+    }
+
+    @Test
     fun `playback action helpers reflect loading playing paused and idle states`() {
-        assertEquals("Abspielen", playbackActionLabel(null, "item-1", isPreparingPlayback = false, isPlayingPlayback = false))
+        assertEquals("Jetzt abspielen", playbackActionLabel(null, "item-1", isPreparingPlayback = false, isPlayingPlayback = false))
         assertEquals("Lädt…", playbackActionLabel("item-1", "item-1", isPreparingPlayback = true, isPlayingPlayback = false))
         assertEquals("Pause", playbackActionLabel("item-1", "item-1", isPreparingPlayback = false, isPlayingPlayback = true))
-        assertEquals("Resume", playbackActionLabel("item-1", "item-1", isPreparingPlayback = false, isPlayingPlayback = false))
+        assertEquals("Fortsetzen", playbackActionLabel("item-1", "item-1", isPreparingPlayback = false, isPlayingPlayback = false))
         assertTrue(playbackActionEnabled(null, "item-1", isPreparingPlayback = false))
         assertTrue(!playbackActionEnabled("item-1", "item-1", isPreparingPlayback = true))
     }

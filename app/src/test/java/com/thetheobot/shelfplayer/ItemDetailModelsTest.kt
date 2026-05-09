@@ -212,7 +212,7 @@ class ItemDetailModelsTest {
     @Test
     fun `item detail action copy keeps playback label primary and chapter start secondary only when chapters exist`() {
         val withChapters = itemDetailActionCopy(
-            playbackActionLabel = " Abspielen ",
+            playbackActionLabel = "Fortsetzen",
             hasChapters = true,
         )
         val withoutChapters = itemDetailActionCopy(
@@ -220,12 +220,14 @@ class ItemDetailModelsTest {
             hasChapters = false,
         )
 
-        assertEquals("Abspielen", withChapters.primaryActionLabel)
+        assertEquals("Fortsetzen", withChapters.primaryActionLabel)
         assertEquals(true, withChapters.showChapterStartAction)
+        assertEquals("Ab Kapitel starten", withChapters.chapterStartActionLabel)
         assertEquals(true, withChapters.chapterStartActionEnabled)
 
         assertEquals("Lädt…", withoutChapters.primaryActionLabel)
         assertEquals(false, withoutChapters.showChapterStartAction)
+        assertEquals("Ab Kapitel starten", withoutChapters.chapterStartActionLabel)
         assertEquals(false, withoutChapters.chapterStartActionEnabled)
     }
 
@@ -236,8 +238,9 @@ class ItemDetailModelsTest {
             hasChapters = true,
         )
 
-        assertEquals("Abspielen", copy.primaryActionLabel)
+        assertEquals("Jetzt abspielen", copy.primaryActionLabel)
         assertEquals(true, copy.showChapterStartAction)
+        assertEquals("Ab Kapitel starten", copy.chapterStartActionLabel)
         assertEquals(true, copy.chapterStartActionEnabled)
     }
 }

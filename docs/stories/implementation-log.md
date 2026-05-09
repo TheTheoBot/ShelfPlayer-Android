@@ -701,3 +701,17 @@
   - Local Gradle execution is blocked here because Java is not installed in this environment.
 - Commit(s): pending
 - Next step: Commit and push the slice, then update Story #11 with the final commit hash and GitHub Actions run link/status.
+## 2026-05-09T03:23:16Z
+- Story/Issue: #15 — Story: Library and Item Detail CTA hierarchy polish
+- Implemented:
+- Refined the Library card and Item Detail hero copy to use clearer German CTAs and scannable summary text, while keeping navigation and data flow unchanged.
+- Added pure presentation helpers for library item labels and item detail summary/action copy, including safer fallbacks for blank playback labels and missing chapters.
+- Reordered the Library card actions so the primary play action is first and the details action is secondary, and surfaced the item-detail summary in the hero card.
+- Expanded JVM regression coverage for helper formatting, label fallbacks, and item-detail summary/action copy behavior.
+- Verification:
+- `git diff --check` ✅
+- `./gradlew testDebugUnitTest --tests com.thetheobot.shelfplayer.LibraryRepositoryTest --tests com.thetheobot.shelfplayer.ItemDetailModelsTest` could not run locally because `java` is not installed in this environment.
+- GitHub issue: https://github.com/TheTheoBot/ShelfPlayer-Android/issues/15
+- Commit(s): pending
+- Next step:
+- Push this slice, then let CI run the Android unit tests.

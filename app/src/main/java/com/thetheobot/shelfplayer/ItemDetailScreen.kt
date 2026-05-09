@@ -120,7 +120,10 @@ fun ItemDetailScreen(
                 )
                 val firstChapter = detail.chapters.firstOrNull()
                 item {
-                    DetailHeader(item = item)
+                    DetailHeader(
+                        item = item,
+                        summaryText = formatItemDetailSummary(detail),
+                    )
                 }
                 item {
                     DetailDescription(description = detail.description)
@@ -140,7 +143,7 @@ fun ItemDetailScreen(
                                     onClick = { firstChapter?.let { onChapterSelected(it.id) } },
                                     enabled = actionCopy.chapterStartActionEnabled,
                                 ) {
-                                    Text("Ab hier abspielen")
+                                    Text(actionCopy.chapterStartActionLabel)
                                 }
                             }
                             TextButton(onClick = onBackClick) {
@@ -179,7 +182,10 @@ fun ItemDetailScreen(
 }
 
 @Composable
-private fun DetailHeader(item: LibraryItem) {
+private fun DetailHeader(
+    item: LibraryItem,
+    summaryText: String,
+) {
     Card(colors = CardDefaults.elevatedCardColors()) {
         Row(
             modifier = Modifier
@@ -210,7 +216,7 @@ private fun DetailHeader(item: LibraryItem) {
                 Text(item.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text(item.author, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "${formatItemType(item.itemType)} · Fortschritt ${formatProgress(item.progressPercent)}",
+                    summaryText,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

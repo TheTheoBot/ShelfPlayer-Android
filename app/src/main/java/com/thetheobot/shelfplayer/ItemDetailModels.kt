@@ -37,17 +37,7 @@ internal fun itemDetailStateTitle(state: ItemDetailState): String {
 internal fun itemDetailStateMessage(state: ItemDetailState): String {
     return when (state) {
         ItemDetailState.Loading -> "Die Detailansicht wird vorbereitet."
-        is ItemDetailState.Loaded -> {
-            val chapterCount = state.detail.chapters.size
-            val chapterText = if (chapterCount == 1) "1 Kapitel" else "$chapterCount Kapitel"
-            val progressText = "${state.detail.progressPercent}%"
-            val description = state.detail.description.trim()
-            if (description.isNotBlank()) {
-                "$chapterText · $progressText · ${description.take(140)}"
-            } else {
-                "$chapterText · $progressText"
-            }
-        }
+        is ItemDetailState.Loaded -> formatItemDetailSummary(state.detail)
         is ItemDetailState.Error -> {
             if (state.message.isBlank()) {
                 "Bitte später erneut versuchen."
@@ -58,9 +48,25 @@ internal fun itemDetailStateMessage(state: ItemDetailState): String {
     }
 }
 
+internal fun formatItemDetailSummary(detail: LibraryItemDetail): String {
+    val chapterCount = detail.chapters.size
+    val chapterText = when (chapterCount) {
+        0 -> "Keine Kapitel"
+        1 -> "1 Kapitel"
+        else -> "$chapterCount Kapitel"
+    }
+
+    return listOf(
+        formatItemType(detail.item.itemType),
+        "${formatProgress(detail.progressPercent)} Fortschritt",
+        chapterText,
+    ).joinToString(" · ")
+}
+
 internal data class ItemDetailActionCopy(
     val primaryActionLabel: String,
     val showChapterStartAction: Boolean,
+    val chapterStartActionLabel: String,
     val chapterStartActionEnabled: Boolean,
 )
 
@@ -68,11 +74,16 @@ internal fun itemDetailActionCopy(
     playbackActionLabel: String,
     hasChapters: Boolean,
 ): ItemDetailActionCopy {
-    val primaryActionLabel = playbackActionLabel.trim().ifBlank { "Abspielen" }
+    val normalizedLabel = when (playbackActionLabel.trim()) {
+        "Resume", "Fortsetzen" -> "Fortsetzen"
+        "Pause" -> "Pausieren"
+        else -> playbackActionLabel.trim().ifBlank { "Jetzt abspielen" }
+    }
 
     return ItemDetailActionCopy(
-        primaryActionLabel = primaryActionLabel,
+        primaryActionLabel = normalizedLabel,
         showChapterStartAction = hasChapters,
+        chapterStartActionLabel = "Ab Kapitel starten",
         chapterStartActionEnabled = hasChapters,
     )
 }

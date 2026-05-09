@@ -94,8 +94,8 @@ internal fun playbackActionLabel(
 
     return when {
         playbackActiveItemId == itemId && isPlayingPlayback -> "Pause"
-        playbackActiveItemId == itemId -> "Resume"
-        else -> "Abspielen"
+        playbackActiveItemId == itemId -> "Fortsetzen"
+        else -> "Jetzt abspielen"
     }
 }
 
@@ -1251,13 +1251,13 @@ private fun PlayerScreen(
                 Text("${skipIntervalSeconds}s")
             }
             Button(onClick = onPlay, enabled = !isPreparingPlayback) {
-                Text(if (isPreparingPlayback) "Lädt…" else "Play")
+                Text(if (isPreparingPlayback) "Lädt…" else "Abspielen")
             }
             Button(
                 onClick = onPauseResume,
                 enabled = !isPreparingPlayback && playbackDurationMs > 0,
             ) {
-                Text(if (isPlayingPlayback) "Pause" else "Resume")
+                Text(if (isPlayingPlayback) "Pause" else "Fortsetzen")
             }
             Button(onClick = onSkipForward, enabled = playbackDurationMs > 0 && !isPreparingPlayback) {
                 Text("${skipIntervalSeconds}s")
@@ -1265,7 +1265,7 @@ private fun PlayerScreen(
                 Icon(Icons.Rounded.FastForward, contentDescription = null)
             }
             Button(onClick = onStop, enabled = playbackDurationMs > 0 || isPreparingPlayback) {
-                Text("Stop")
+                Text("Stopp")
             }
         }
 

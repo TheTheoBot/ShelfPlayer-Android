@@ -249,11 +249,11 @@ private fun LibraryItemCard(
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = onClick) {
-                    Text("Details")
-                }
                 Button(onClick = onPlayClick) {
-                    Text("Play")
+                    Text(libraryItemPrimaryActionLabel(item))
+                }
+                OutlinedButton(onClick = onClick) {
+                    Text(libraryItemSecondaryActionLabel())
                 }
             }
         }
