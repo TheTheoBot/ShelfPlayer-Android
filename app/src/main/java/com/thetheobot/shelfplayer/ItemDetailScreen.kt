@@ -122,7 +122,7 @@ fun ItemDetailScreen(
                 item {
                     DetailHeader(
                         item = item,
-                        summaryText = formatItemDetailSummary(detail),
+                        summaryRows = itemDetailHeroSummaryRows(detail),
                     )
                 }
                 item {
@@ -141,7 +141,7 @@ fun ItemDetailScreen(
                             if (actionCopy.showChapterStartAction) {
                                 OutlinedButton(
                                     onClick = { firstChapter?.let { onChapterSelected(it.id) } },
-                                    enabled = actionCopy.chapterStartActionEnabled,
+                                    enabled = actionCopy.chapterStartActionEnabled && playbackActionEnabled,
                                 ) {
                                     Text(actionCopy.chapterStartActionLabel)
                                 }
@@ -172,6 +172,7 @@ fun ItemDetailScreen(
                         ChapterCard(
                             chapter = chapter,
                             selected = chapter.id == selectedChapterId,
+                            enabled = playbackActionEnabled,
                             onChapterSelected = { onChapterSelected(chapter.id) },
                         )
                     }
@@ -184,7 +185,7 @@ fun ItemDetailScreen(
 @Composable
 private fun DetailHeader(
     item: LibraryItem,
-    summaryText: String,
+    summaryRows: List<ItemDetailHeroSummaryRow>,
 ) {
     Card(colors = CardDefaults.elevatedCardColors()) {
         Row(
@@ -215,11 +216,28 @@ private fun DetailHeader(
             ) {
                 Text(item.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text(item.author, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    summaryText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    summaryRows.forEach { row ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                row.label,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                row.value,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -251,8 +269,8 @@ private fun CoverFallback(item: LibraryItem) {
 
 @Composable
 private fun DetailDescription(description: String) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
     val trimmed = description.trim()
+    var expanded by rememberSaveable(trimmed) { mutableStateOf(false) }
 
     Card(colors = CardDefaults.elevatedCardColors()) {
         Column(
@@ -279,6 +297,7 @@ private fun DetailDescription(description: String) {
 private fun ChapterCard(
     chapter: LibraryChapter,
     selected: Boolean,
+    enabled: Boolean,
     onChapterSelected: () -> Unit,
 ) {
     Card(
@@ -294,7 +313,7 @@ private fun ChapterCard(
         } else {
             null
         },
-        modifier = Modifier.clickable(onClick = onChapterSelected),
+        modifier = Modifier.clickable(enabled = enabled, onClick = onChapterSelected),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -318,7 +337,7 @@ private fun ChapterCard(
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = onChapterSelected) {
+                Button(onClick = onChapterSelected, enabled = enabled) {
                     Text("Ab hier abspielen")
                 }
             }

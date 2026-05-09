@@ -41,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -93,7 +94,7 @@ internal fun playbackActionLabel(
     }
 
     return when {
-        playbackActiveItemId == itemId && isPlayingPlayback -> "Pause"
+        playbackActiveItemId == itemId && isPlayingPlayback -> "Pausieren"
         playbackActiveItemId == itemId -> "Fortsetzen"
         else -> "Jetzt abspielen"
     }
@@ -286,6 +287,7 @@ internal fun ShelfPlayerApp(
         )
     }
     val playbackProgressScope = remember { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
+    val playbackScope = rememberCoroutineScope()
 
     LaunchedEffect(appSettings.defaultPlaybackRate, playbackActiveItemId, isPlayingPlayback, isPreparingPlayback) {
         if (playbackActiveItemId == null && !isPlayingPlayback && !isPreparingPlayback) {
@@ -464,71 +466,80 @@ internal fun ShelfPlayerApp(
 
     fun startPlayback(itemId: String, startPositionSeconds: Int? = selectedChapterStartSeconds) {
         val token = connectionCredentials?.accessToken?.takeIf { it.isNotBlank() }
-        val streamUrl = token?.let { requestPlaybackStreamUrl(itemId, it) }
-        if (streamUrl == null || token == null) {
+        if (token == null) {
             playbackError = "Fehlende Verbindung oder kein Titel ausgewählt"
             return
         }
 
-        releasePlayback()
-        playbackError = null
-        playbackRate = appSettings.defaultPlaybackRate
-
-        val watchdogToken = playbackPrepareWatchdogToken + 1
-        playbackPrepareWatchdogToken = watchdogToken
-
-        val player = android.media.MediaPlayer()
-        mediaPlayer = player
-        playbackActiveItemId = itemId
-        isPreparingPlayback = true
-
-        player.setOnPreparedListener {
-            playbackPrepareWatchdogToken += 1
-            isPreparingPlayback = false
-            playbackDurationMs = it.duration.coerceAtLeast(0)
-            val effectiveStartPositionSeconds = resolvePlaybackStartPositionSeconds(
-                itemId = itemId,
-                requestedStartPositionSeconds = startPositionSeconds,
-                latestProgress = latestPlaybackProgress,
-            )
-            val startPositionMs = effectiveStartPositionSeconds?.coerceAtLeast(0)?.times(1000)
-            if (startPositionMs != null && startPositionMs in 0..playbackDurationMs) {
-                it.seekTo(startPositionMs)
-                playbackPositionMs = startPositionMs
-            } else {
-                playbackPositionMs = 0
+        playbackScope.launch {
+            val streamUrl = withContext(Dispatchers.IO) {
+                requestPlaybackStreamUrl(itemId, token)
             }
-            applyPlaybackRate(it, playbackRate)
-            it.start()
-            isPlayingPlayback = true
-            startPlaybackProgressSyncLoop(itemId)
-        }
-        player.setOnCompletionListener {
-            isPlayingPlayback = false
-            stopPlaybackProgressSyncLoop()
-            playbackPositionMs = playbackDurationMs
-            syncPlaybackProgressNow()
-        }
-        player.setOnErrorListener { _, _, _ ->
-            playbackPrepareWatchdogToken += 1
-            releasePlayback()
-            playbackError = "Wiedergabe konnte nicht gestartet werden"
-            true
-        }
+            if (streamUrl == null) {
+                playbackError = "Fehlende Verbindung oder kein Titel ausgewählt"
+                return@launch
+            }
 
-        try {
-            player.setDataSource(
-                context,
-                android.net.Uri.parse(streamUrl),
-                mapOf("Authorization" to "Bearer $token"),
-            )
-            player.prepareAsync()
-        } catch (throwable: Throwable) {
-            playbackPrepareWatchdogToken += 1
-            clearPlaybackStateWithoutSync()
-            playbackError = throwable.message?.takeIf { it.isNotBlank() }
-                ?: "Wiedergabe konnte nicht gestartet werden"
-            return
+            releasePlayback()
+            playbackError = null
+            playbackRate = appSettings.defaultPlaybackRate
+
+            val watchdogToken = playbackPrepareWatchdogToken + 1
+            playbackPrepareWatchdogToken = watchdogToken
+
+            val player = android.media.MediaPlayer()
+            mediaPlayer = player
+            playbackActiveItemId = itemId
+            isPreparingPlayback = true
+
+            player.setOnPreparedListener {
+                playbackPrepareWatchdogToken += 1
+                isPreparingPlayback = false
+                playbackDurationMs = it.duration.coerceAtLeast(0)
+                val effectiveStartPositionSeconds = resolvePlaybackStartPositionSeconds(
+                    itemId = itemId,
+                    requestedStartPositionSeconds = startPositionSeconds,
+                    latestProgress = latestPlaybackProgress,
+                )
+                val startPositionMs = effectiveStartPositionSeconds?.coerceAtLeast(0)?.times(1000)
+                if (startPositionMs != null && startPositionMs in 0..playbackDurationMs) {
+                    it.seekTo(startPositionMs)
+                    playbackPositionMs = startPositionMs
+                } else {
+                    playbackPositionMs = 0
+                }
+                applyPlaybackRate(it, playbackRate)
+                it.start()
+                isPlayingPlayback = true
+                startPlaybackProgressSyncLoop(itemId)
+            }
+            player.setOnCompletionListener {
+                isPlayingPlayback = false
+                stopPlaybackProgressSyncLoop()
+                playbackPositionMs = playbackDurationMs
+                syncPlaybackProgressNow()
+            }
+            player.setOnErrorListener { _, _, _ ->
+                playbackPrepareWatchdogToken += 1
+                releasePlayback()
+                playbackError = "Wiedergabe konnte nicht gestartet werden"
+                true
+            }
+
+            try {
+                player.setDataSource(
+                    context,
+                    android.net.Uri.parse(streamUrl),
+                    mapOf("Authorization" to "Bearer $token"),
+                )
+                player.prepareAsync()
+            } catch (throwable: Throwable) {
+                playbackPrepareWatchdogToken += 1
+                clearPlaybackStateWithoutSync()
+                playbackError = throwable.message?.takeIf { it.isNotBlank() }
+                    ?: "Wiedergabe konnte nicht gestartet werden"
+                return@launch
+            }
         }
     }
 
@@ -1018,7 +1029,7 @@ internal fun ShelfPlayerApp(
                                 onChapterSelected = { chapter ->
                                     selectedChapterId = chapter.id
                                     selectedChapterStartSeconds = chapter.startSeconds
-                                    seekPlayback((chapter.startSeconds ?: 0) * 1000)
+                                    chapter.startSeconds?.let { seekPlayback(it * 1000) }
                                 },
                                 onStop = { releasePlayback() },
                             )
@@ -1257,7 +1268,7 @@ private fun PlayerScreen(
                 onClick = onPauseResume,
                 enabled = !isPreparingPlayback && playbackDurationMs > 0,
             ) {
-                Text(if (isPlayingPlayback) "Pause" else "Fortsetzen")
+                Text(if (isPlayingPlayback) "Pausieren" else "Fortsetzen")
             }
             Button(onClick = onSkipForward, enabled = playbackDurationMs > 0 && !isPreparingPlayback) {
                 Text("${skipIntervalSeconds}s")

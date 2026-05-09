@@ -60,6 +60,65 @@ class ItemDetailModelsTest {
     }
 
     @Test
+    fun `item detail hero summary rows present a scannable labeled view while the string summary stays intact`() {
+        val detail = LibraryItemDetail(
+            item = LibraryItem(
+                id = "abc123",
+                title = "Test Item",
+                author = "Author",
+                progressPercent = 10,
+                itemType = LibraryItemType.Podcast,
+            ),
+            progressPercent = 10,
+            chapters = listOf(
+                LibraryChapter(id = "chapter-1", title = "Chapter 1", startSeconds = 5, endSeconds = 15),
+                LibraryChapter(id = "chapter-2", title = "Chapter 2", startSeconds = 15, endSeconds = 25),
+            ),
+        )
+
+        assertEquals(
+            listOf(
+                ItemDetailHeroSummaryRow(label = "Typ", value = "Podcast"),
+                ItemDetailHeroSummaryRow(label = "Fortschritt", value = "10%"),
+                ItemDetailHeroSummaryRow(label = "Kapitel", value = "2 Kapitel"),
+            ),
+            itemDetailHeroSummaryRows(detail),
+        )
+        assertEquals(
+            "Podcast · 10% Fortschritt · 2 Kapitel",
+            formatItemDetailSummary(detail),
+        )
+    }
+
+    @Test
+    fun `item detail hero summary rows fall back safely for empty chapters and completion bounds`() {
+        val detail = LibraryItemDetail(
+            item = LibraryItem(
+                id = "abc123",
+                title = "Test Item",
+                author = "Author",
+                progressPercent = 140,
+                itemType = LibraryItemType.Audiobook,
+            ),
+            progressPercent = 140,
+            chapters = emptyList(),
+        )
+
+        assertEquals(
+            listOf(
+                ItemDetailHeroSummaryRow(label = "Typ", value = "Hörbuch"),
+                ItemDetailHeroSummaryRow(label = "Fortschritt", value = "100%"),
+                ItemDetailHeroSummaryRow(label = "Kapitel", value = "Keine Kapitel"),
+            ),
+            itemDetailHeroSummaryRows(detail),
+        )
+        assertEquals(
+            "Hörbuch · 100% Fortschritt · Keine Kapitel",
+            formatItemDetailSummary(detail),
+        )
+    }
+
+    @Test
     fun `active chapter context display text wraps the active chapter label`() {
         assertEquals(
             "Aktuelles Kapitel: Kein Kapitel an dieser Position",
@@ -157,7 +216,7 @@ class ItemDetailModelsTest {
     }
 
     @Test
-    fun `selected chapter context keeps the selected start time when the active item matches`() {
+    fun `selected chapter context clears the start time when the chapter is no longer available`() {
         val detail = LibraryItemDetail(
             item = LibraryItem(
                 id = "abc123",
@@ -173,13 +232,14 @@ class ItemDetailModelsTest {
         val context = resolvePlayerSelectedChapterContext(
             playbackActiveItemId = "abc123",
             playbackLibraryItemDetail = detail,
-            selectedChapterId = null,
+            selectedChapterId = "missing-chapter",
             selectedChapterStartSeconds = 42,
         )
 
         assertNull(context.label)
-        assertEquals(Integer.valueOf(42), context.startSeconds)
+        assertNull(context.startSeconds)
     }
+
 
     @Test
     fun `selected chapter context matches the active playback item only when ids align`() {

@@ -48,6 +48,26 @@ internal fun itemDetailStateMessage(state: ItemDetailState): String {
     }
 }
 
+internal data class ItemDetailHeroSummaryRow(
+    val label: String,
+    val value: String,
+)
+
+internal fun itemDetailHeroSummaryRows(detail: LibraryItemDetail): List<ItemDetailHeroSummaryRow> {
+    val chapterCount = detail.chapters.size
+    val chapterText = when (chapterCount) {
+        0 -> "Keine Kapitel"
+        1 -> "1 Kapitel"
+        else -> "$chapterCount Kapitel"
+    }
+
+    return listOf(
+        ItemDetailHeroSummaryRow(label = "Typ", value = formatItemType(detail.item.itemType)),
+        ItemDetailHeroSummaryRow(label = "Fortschritt", value = formatProgress(detail.progressPercent)),
+        ItemDetailHeroSummaryRow(label = "Kapitel", value = chapterText),
+    )
+}
+
 internal fun formatItemDetailSummary(detail: LibraryItemDetail): String {
     val chapterCount = detail.chapters.size
     val chapterText = when (chapterCount) {
@@ -76,7 +96,7 @@ internal fun itemDetailActionCopy(
 ): ItemDetailActionCopy {
     val normalizedLabel = when (playbackActionLabel.trim()) {
         "Resume", "Fortsetzen" -> "Fortsetzen"
-        "Pause" -> "Pausieren"
+        "Pause", "Pausieren" -> "Pausieren"
         else -> playbackActionLabel.trim().ifBlank { "Jetzt abspielen" }
     }
 
@@ -137,12 +157,17 @@ internal fun resolvePlayerSelectedChapterContext(
         return PlayerSelectedChapterContext(label = null, startSeconds = null)
     }
 
-    val selectedChapterLabel = playbackLibraryItemDetail?.chapters.let { chapters ->
-        selectedChapterId?.let { chapterId -> selectedChapterDisplayLabel(chapters.orEmpty(), chapterId) }
+    val resolvedSelectedChapterId = selectedChapterId?.trim().orEmpty()
+    if (resolvedSelectedChapterId.isBlank()) {
+        return PlayerSelectedChapterContext(label = null, startSeconds = null)
     }
 
+    val chapters = playbackLibraryItemDetail?.chapters.orEmpty()
+    val selectedChapter = chapters.firstOrNull { it.id == resolvedSelectedChapterId }
+        ?: return PlayerSelectedChapterContext(label = null, startSeconds = null)
+
     return PlayerSelectedChapterContext(
-        label = selectedChapterLabel,
+        label = selectedChapterDisplayLabel(chapters, resolvedSelectedChapterId),
         startSeconds = selectedChapterStartSeconds,
     )
 }

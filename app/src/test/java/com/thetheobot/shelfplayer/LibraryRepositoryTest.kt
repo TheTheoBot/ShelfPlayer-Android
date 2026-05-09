@@ -447,7 +447,7 @@ class LibraryRepositoryTest {
     fun `playback action helpers reflect loading playing paused and idle states`() {
         assertEquals("Jetzt abspielen", playbackActionLabel(null, "item-1", isPreparingPlayback = false, isPlayingPlayback = false))
         assertEquals("Lädt…", playbackActionLabel("item-1", "item-1", isPreparingPlayback = true, isPlayingPlayback = false))
-        assertEquals("Pause", playbackActionLabel("item-1", "item-1", isPreparingPlayback = false, isPlayingPlayback = true))
+        assertEquals("Pausieren", playbackActionLabel("item-1", "item-1", isPreparingPlayback = false, isPlayingPlayback = true))
         assertEquals("Fortsetzen", playbackActionLabel("item-1", "item-1", isPreparingPlayback = false, isPlayingPlayback = false))
         assertTrue(playbackActionEnabled(null, "item-1", isPreparingPlayback = false))
         assertTrue(!playbackActionEnabled("item-1", "item-1", isPreparingPlayback = true))

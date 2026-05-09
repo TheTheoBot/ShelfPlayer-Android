@@ -18,6 +18,46 @@ class ShelfPlayerAppTest {
     }
 
     @Test
+    fun `playback action label uses german wording for active playing and keeps idle states safe`() {
+        assertEquals(
+            "Pausieren",
+            playbackActionLabel(
+                playbackActiveItemId = "item-1",
+                itemId = "item-1",
+                isPreparingPlayback = false,
+                isPlayingPlayback = true,
+            ),
+        )
+        assertEquals(
+            "Lädt…",
+            playbackActionLabel(
+                playbackActiveItemId = "item-1",
+                itemId = "item-1",
+                isPreparingPlayback = true,
+                isPlayingPlayback = false,
+            ),
+        )
+        assertEquals(
+            "Jetzt abspielen",
+            playbackActionLabel(
+                playbackActiveItemId = null,
+                itemId = "item-1",
+                isPreparingPlayback = false,
+                isPlayingPlayback = false,
+            ),
+        )
+        assertEquals(
+            "Fortsetzen",
+            playbackActionLabel(
+                playbackActiveItemId = "item-1",
+                itemId = "item-1",
+                isPreparingPlayback = false,
+                isPlayingPlayback = false,
+            ),
+        )
+    }
+
+    @Test
     fun `player state helper reports active playback while playing`() {
         assertEquals(
             "Wiedergabe läuft",

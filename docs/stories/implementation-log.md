@@ -1,5 +1,23 @@
 # Implementation Log
 
+## 2026-05-09T07:57:26Z
+- Story/Issue: #14 — Story: Library and Item Detail CTA hierarchy polish
+- Implemented:
+- Harmonized playback wording so the shared playback label and the in-player active state now use "Pausieren" instead of "Pause".
+- Added a labeled item-detail hero summary helper and rendered the detail header as scannable rows while keeping the existing one-line summary string for status text.
+- Lowered the visual priority of the library secondary action by switching it to a text button.
+- Hardened chapter selection so disabled playback now blocks both the top-level detail chapter action and the chapter-card path, and missing chapter metadata no longer falls back to seeking at position 0.
+- Added JVM coverage for the hero summary helper, playback-label wording, chapter-context fallback behavior, and chapter selection defaults.
+- Added Compose instrumentation coverage for library loaded-state actions, item-detail hero rows, the disabled preparing state, and enabled chapter-card selection.
+- Verification:
+- `git diff --check` ✅
+- Local Gradle execution remains blocked here because `java` is not installed in this environment (`java: command not found`).
+- Independent spec review: PASS
+- Independent code quality review: APPROVED
+- Next step:
+- Commit and push this polish slice, then update Story #14 with the commit hash and GitHub Actions run link.
+
+
 ## 2026-05-09T06:37:52Z
 - Story/Issue: #16 — Story: Connection onboarding clarity summary
 - Implemented:
