@@ -90,11 +90,22 @@ class AppLaunchRouteTest {
     }
 
     @Test
-    fun `back navigation closes an open item detail before changing tabs`() {
+    fun `back navigation returns from the player to the library detail context when an item is selected`() {
+        assertEquals(
+            AppBackNavigation.ReturnToLibraryDetail,
+            resolveAppBackNavigation(
+                selectedTab = AppTab.Player,
+                selectedLibraryItemId = "abc123",
+            ),
+        )
+    }
+
+    @Test
+    fun `back navigation closes an open item detail on the library tab before changing tabs`() {
         assertEquals(
             AppBackNavigation.CloseItemDetail,
             resolveAppBackNavigation(
-                selectedTab = AppTab.Player,
+                selectedTab = AppTab.Library,
                 selectedLibraryItemId = "abc123",
             ),
         )

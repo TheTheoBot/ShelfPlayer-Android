@@ -13,6 +13,7 @@ internal data class AppLaunchState(
 
 internal enum class AppBackNavigation {
     CloseItemDetail,
+    ReturnToLibraryDetail,
     SwitchToLibrary,
     Unhandled,
 }
@@ -22,6 +23,7 @@ internal fun resolveAppBackNavigation(
     selectedLibraryItemId: String?,
 ): AppBackNavigation {
     return when {
+        selectedTab == AppTab.Player && selectedLibraryItemId != null -> AppBackNavigation.ReturnToLibraryDetail
         selectedLibraryItemId != null -> AppBackNavigation.CloseItemDetail
         selectedTab != AppTab.Library -> AppBackNavigation.SwitchToLibrary
         else -> AppBackNavigation.Unhandled

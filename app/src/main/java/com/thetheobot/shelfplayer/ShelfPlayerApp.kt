@@ -835,6 +835,10 @@ internal fun ShelfPlayerApp(
                             resetSelectedLibraryItemDetail()
                         }
 
+                        AppBackNavigation.ReturnToLibraryDetail -> {
+                            selectedTab = AppTab.Library
+                        }
+
                         AppBackNavigation.SwitchToLibrary -> {
                             selectedTab = AppTab.Library
                         }
