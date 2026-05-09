@@ -670,5 +670,5 @@
   - `git diff --check` ✅
   - Added-line security scan: no matches for hardcoded secrets, shell injection, eval/exec, pickle, or SQL injection
   - Local Gradle execution is blocked here because Java is not installed in this environment.
-- Commit(s): pending
-- Next step: Commit, push, and attach the GitHub Actions run plus a story issue update once the branch is published.
+- Commit(s): `98b8c78` — feat: add chapter quick-access accessibility cue
+- Next step: Commit the docs log update, push, and attach the GitHub Actions run plus a story issue update once the branch is published.
